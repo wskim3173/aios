@@ -1,0 +1,15 @@
+{
+    "name": "google_search",
+    "description": [
+        "Search information in google"
+    ],
+    "meta": {
+        "author": "example",
+        "version": "0.0.1",
+        "license": "CC0"
+    },
+    "build": {
+        "entry": "google_search.py",
+        "module": "GoogleSearch"
+    }
+}

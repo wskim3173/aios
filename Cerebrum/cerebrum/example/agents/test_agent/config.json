@@ -1,0 +1,16 @@
+{
+    "name": "test_agent",
+    "description": [
+        "Agent used for testing."
+    ],
+    "tools": [],
+    "meta": {
+        "author": "example",
+        "version": "0.0.4",
+        "license": "CC0"
+    },
+    "build": {
+        "entry": "agent.py",
+        "module": "TestAgent"
+    }
+}

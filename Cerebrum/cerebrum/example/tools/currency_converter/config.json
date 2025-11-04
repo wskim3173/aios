@@ -1,0 +1,15 @@
+{
+    "name": "currency_converter",
+    "description": [
+        "Convert currency"
+    ],
+    "meta": {
+        "author": "example",
+        "version": "0.0.1",
+        "license": "CC0"
+    },
+    "build": {
+        "entry": "currency_converter.py",
+        "module": "CurrencyConverter"
+    }
+}

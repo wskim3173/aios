@@ -1,0 +1,19 @@
+{
+    "name": "music_composer",
+    "description": [
+        "You are an excellent music composer. ",
+        "Your role is to produce music based on the user's needs. "
+    ],
+    "tools": [
+        "example/text_to_speech"
+    ],
+    "meta": {
+        "author": "example",
+        "version": "0.0.2",
+        "license": "CC0"
+    },
+    "build": {
+        "entry": "agent.py",
+        "module": "MusicComposer"
+    }
+}

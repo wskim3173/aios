@@ -1,0 +1,15 @@
+{
+    "name": "downloader",
+    "description": [
+        "The downloader tool that can be used to download files from the internet"
+    ],
+    "meta": {
+        "author": "example",
+        "version": "0.0.1",
+        "license": "CC0"
+    },
+    "build": {
+        "entry": "downloader.py",
+        "module": "Downloader"
+    }
+}

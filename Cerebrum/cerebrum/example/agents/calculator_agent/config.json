@@ -1,0 +1,17 @@
+{
+    "name": "calculator_agent",
+    "description": [
+        "You are a calculator agent. You can use the calculator to calculate the result. "
+    ],
+    "tools": [
+    ],
+    "meta": {
+        "author": "example",
+        "version": "0.0.1",
+        "license": "CC0"
+    },
+    "build": {
+        "entry": "agent.py",
+        "module": "CalculatorAgent"
+    }
+}

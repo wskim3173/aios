@@ -1,0 +1,15 @@
+{
+    "name": "wolfram_alpha",
+    "description": [
+        "Tool for mathematical calculation"
+    ],
+    "meta": {
+        "author": "example",
+        "version": "0.0.1",
+        "license": "CC0"
+    },
+    "build": {
+        "entry": "wolfram_alpha.py",
+        "module": "WolframAlpha"
+    }
+}

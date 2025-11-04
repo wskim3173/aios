@@ -1,0 +1,15 @@
+{
+    "name": "speech_to_text",
+    "description": [
+        "The speech to text tool that can be used to convert speech to text"
+    ],
+    "meta": {
+        "author": "openai",
+        "version": "0.0.1",
+        "license": "CC0"
+    },
+    "build": {
+        "entry": "tool.py",
+        "module": "SpeechToText"
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "name": "image_to_image",
+    "description": [
+        "The image to image tool that can be used to convert images to other images"
+    ],
+    "meta": {
+        "author": "timbrooks",
+        "version": "0.0.1",
+        "license": "CC0"
+    },
+    "build": {
+        "entry": "tool.py",
+        "module": "ImageToImage"
+    }
+}

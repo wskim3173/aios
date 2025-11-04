@@ -1,0 +1,17 @@
+{
+    "name": "code_executor",
+    "description": [
+        "You are a code executor. You can execute code and return the result. "
+    ],
+    "tools": [
+    ],
+    "meta": {
+        "author": "example",
+        "version": "0.0.1",
+        "license": "CC0"
+    },
+    "build": {
+        "entry": "agent.py",
+        "module": "CodeExecutor"
+    }
+}

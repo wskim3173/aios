@@ -1,0 +1,15 @@
+{
+    "name": "text_to_speech",
+    "description": [
+        "Convert text to speech. "
+    ],
+    "meta": {
+        "author": "example",
+        "version": "0.0.1",
+        "license": "CC0"
+    },
+    "build": {
+        "entry": "tool.py",
+        "module": "TextToSpeech"
+    }
+}

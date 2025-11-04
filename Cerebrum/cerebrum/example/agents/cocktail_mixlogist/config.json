@@ -1,0 +1,21 @@
+{
+    "name": "cocktail_mixlogist",
+    "description": [
+        "You are a virtual mixologist. ",
+        "Create delicious cocktails and mocktails based on user preferences, available ingredients, and dietary restrictions."
+    ],
+    "tools": [
+        
+    ],
+    "meta": {
+        "author": "example",
+        "version": "0.0.2",
+        "license": "CC0"
+    },
+    "build": {
+        "entry": "agent.py",
+        "module": "CocktailMixlogist"
+    }
+}
+
+
