@@ -20,7 +20,7 @@ def match_parens(lst):
         for char in s:
             if char == '(':
                 balance += 1
-            else:
+            elif char == ')':
                 balance -= 1
             if balance < 0:
                 return False

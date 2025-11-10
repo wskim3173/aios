@@ -11,12 +11,20 @@ def choose_num(x, y):
 
     if x > y:
         return -1
+        
+    # Adjust x to be the next even number if it's odd
+    if x % 2 != 0:
+        x += 1
 
-    for num in range(y, x - 1, -1):
-        if num % 2 == 0:
-            return num
-            
-    return -1
+    # If y is odd, take one step back to find the largest even number
+    if y % 2 != 0:
+        y -= 1
+
+    # If after adjustment, x is greater than y, return -1
+    if x > y:
+        return -1
+
+    return y
 
 def check(candidate):
 

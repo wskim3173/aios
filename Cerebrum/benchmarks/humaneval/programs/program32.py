@@ -22,24 +22,21 @@ def find_zero(xs: list):
     1.0
     """
 
-    # Ensure the input is valid
-    if len(xs) % 2 != 0 or not xs:
-        raise ValueError("Input must be a list of coefficients with even length and not empty.")
-
-    # Use the bisection method to find the zero
-    left, right = -1000, 1000  # Define the interval to search for the root
-    tolerance = 1e-7  # Define the tolerance level for convergence
-    
-    while right - left > tolerance:
-        mid = (left + right) / 2
-        if poly(xs, mid) == 0:
-            return mid
-        elif poly(xs, mid) * poly(xs, left) < 0:
-            right = mid
-        else:
-            left = mid
-
-    return (left + right) / 2
+    # Using Newton's method to find a root
+    x = 0.0  # Initial guess
+    tolerance = 1e-7  # Tolerance for convergence
+    max_iterations = 1000  # Prevent infinite loops
+    for _ in range(max_iterations):
+        fx = poly(xs, x)
+        # Calculate the derivative using numerical approximation
+        dfx = (poly(xs, x + tolerance) - fx) / tolerance
+        if dfx == 0:  # Prevent division by zero
+            break
+        x_new = x - fx / dfx
+        if abs(x_new - x) < tolerance:  # Convergence check
+            return x_new
+        x = x_new
+    return x  # Return the last approximation if not converged
 
 
 

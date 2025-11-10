@@ -12,9 +12,9 @@ def unique_digits(x):
     []
     """
 
-    def has_even_digit(n):
-        return any(int(digit) % 2 == 0 for digit in str(n))
-    
+    def has_even_digit(num):
+        return any(int(digit) % 2 == 0 for digit in str(num))
+
     result = [num for num in x if not has_even_digit(num)]
     return sorted(result)
 

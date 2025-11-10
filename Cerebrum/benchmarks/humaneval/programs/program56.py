@@ -14,15 +14,15 @@ def correct_bracketing(brackets: str):
     False
     """
 
-    balance = 0
+    stack = []
     for char in brackets:
         if char == "<":
-            balance += 1
+            stack.append(char)
         elif char == ">":
-            balance -= 1
-        if balance < 0:
-            return False
-    return balance == 0
+            if not stack:
+                return False
+            stack.pop()
+    return len(stack) == 0
 
 
 

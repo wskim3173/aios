@@ -13,9 +13,7 @@ def car_race_collision(n: int):
     This function outputs the number of such collisions.
     """
 
-    # Each car from one direction will collide with each car from the other direction
-    collisions = n * n
-    return collisions
+    return n * n
 
 
 

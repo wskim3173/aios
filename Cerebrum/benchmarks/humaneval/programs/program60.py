@@ -14,7 +14,7 @@ def sum_to_n(n: int):
     1
     """
 
-    return n * (n + 1) // 2
+    return sum(range(1, n + 1))
 
 
 

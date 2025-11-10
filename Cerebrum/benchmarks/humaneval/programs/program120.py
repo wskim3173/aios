@@ -25,7 +25,12 @@ def maximum(arr, k):
         3. 0 <= k <= len(arr)
     """
 
-    return sorted(arr)[-k:] if k > 0 else []
+    # First, we sort the array in descending order
+    sorted_arr = sorted(arr, reverse=True)
+    # Then we take the first k elements
+    max_k_numbers = sorted_arr[:k]
+    # Finally, we return the sorted list of the maximum k numbers
+    return sorted(max_k_numbers)
 
 def check(candidate):
 

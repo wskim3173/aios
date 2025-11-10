@@ -16,11 +16,16 @@ def get_max_triples(n):
 
     a = [i * i - i + 1 for i in range(1, n + 1)]
     count = 0
-    for i in range(n):
-        for j in range(i + 1, n):
-            for k in range(j + 1, n):
-                if (a[i] + a[j] + a[k]) % 3 == 0:
-                    count += 1
+    modulo_count = [0] * 3
+
+    for value in a:
+        modulo_count[value % 3] += 1
+
+    count += (modulo_count[0] * (modulo_count[0] - 1) * (modulo_count[0] - 2)) // 6
+    count += (modulo_count[1] * (modulo_count[1] - 1) * (modulo_count[1] - 2)) // 6
+    count += (modulo_count[2] * (modulo_count[2] - 1) * (modulo_count[2] - 2)) // 6
+    count += modulo_count[0] * modulo_count[1] * modulo_count[2]
+
     return count
 
 def check(candidate):

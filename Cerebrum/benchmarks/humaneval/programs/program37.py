@@ -11,9 +11,9 @@ def sort_even(l: list):
     """
 
     even_indices = sorted(l[i] for i in range(0, len(l), 2))
-    sorted_list = l[:]
-    sorted_list[::2] = even_indices
-    return sorted_list
+    result = l[:]
+    result[0::2] = even_indices
+    return result
 
 
 

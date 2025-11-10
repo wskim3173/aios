@@ -10,12 +10,12 @@ def sort_third(l: list):
     [2, 6, 3, 4, 8, 9, 5]
     """
 
-    sorted_values = sorted([l[i] for i in range(len(l)) if i % 3 == 0])
+    sorted_third = sorted([l[i] for i in range(len(l)) if i % 3 == 0])
     result = l[:]
     
-    for index, value in enumerate(result):
-        if index % 3 == 0:
-            result[index] = sorted_values.pop(0)
+    for i in range(len(l)):
+        if i % 3 == 0:
+            result[i] = sorted_third.pop(0)
     
     return result
 

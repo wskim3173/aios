@@ -30,8 +30,8 @@ def eat(number, need, remaining):
     """
 
     total_eaten = number + min(need, remaining)
-    carrots_left = remaining - min(need, remaining)
-    return [total_eaten, carrots_left]
+    remaining_carrots = max(0, remaining - need)
+    return [total_eaten, remaining_carrots]
 
 def check(candidate):
 

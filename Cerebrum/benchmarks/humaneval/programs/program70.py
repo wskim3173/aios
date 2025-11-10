@@ -16,12 +16,10 @@ def strange_sort_list(lst):
 
     sorted_lst = sorted(lst)
     result = []
-    
     while sorted_lst:
         result.append(sorted_lst.pop(0))  # Append the minimum
-        if sorted_lst:  # Check if there are still elements left
+        if sorted_lst:
             result.append(sorted_lst.pop(-1))  # Append the maximum
-
     return result
 
 def check(candidate):

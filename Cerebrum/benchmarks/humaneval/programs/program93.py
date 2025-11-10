@@ -14,23 +14,21 @@ def encode(message):
     'tHKS KS C MGSSCGG'
     """
 
-    vowels = 'aeiouAEIOU'
     encoded_message = []
-
+    vowels = 'aeiou'
+    
     for char in message:
         if char.isalpha():
             # Swap case
             if char in vowels:
                 # Replace with letter 2 places ahead
-                if char.islower():
-                    encoded_message.append(chr(((ord(char) - ord('a') + 2) % 26) + ord('a')))
-                else:
-                    encoded_message.append(chr(((ord(char) - ord('A') + 2) % 26) + ord('A')))
+                new_char = chr((ord(char.lower()) - 97 + 2) % 26 + 97)
+                encoded_message.append(new_char.upper())
             else:
                 encoded_message.append(char.swapcase())
         else:
             encoded_message.append(char)
-
+            
     return ''.join(encoded_message)
 
 def check(candidate):

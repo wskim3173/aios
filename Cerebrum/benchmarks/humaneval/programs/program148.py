@@ -23,11 +23,11 @@ def bf(planet1, planet2):
     
     index1 = planets.index(planet1)
     index2 = planets.index(planet2)
-
-    start_index = min(index1, index2) + 1
-    end_index = max(index1, index2)
-
-    return planets[start_index:end_index]
+    
+    if index1 > index2:
+        index1, index2 = index2, index1
+    
+    return tuple(planets[index1+1:index2])
 
 def check(candidate):
 

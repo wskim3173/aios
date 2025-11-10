@@ -11,18 +11,19 @@ def count_up_to(n):
     count_up_to(18) => [2,3,5,7,11,13,17]
     """
 
-    def is_prime(num):
-        if num < 2:
-            return False
+    if n < 2:
+        return []
+    
+    primes = []
+    for num in range(2, n):
+        is_prime = True
         for i in range(2, int(num**0.5) + 1):
             if num % i == 0:
-                return False
-        return True
-
-    primes = []
-    for i in range(n):
-        if is_prime(i):
-            primes.append(i)
+                is_prime = False
+                break
+        if is_prime:
+            primes.append(num)
+    
     return primes
 
 def check(candidate):

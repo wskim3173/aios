@@ -20,7 +20,7 @@ def find_max(words):
         if (unique_count > max_unique_count) or (unique_count == max_unique_count and word < max_word):
             max_word = word
             max_unique_count = unique_count
-            
+
     return max_word
 
 def check(candidate):

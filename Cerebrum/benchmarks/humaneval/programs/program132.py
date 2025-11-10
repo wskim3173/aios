@@ -14,19 +14,19 @@ def is_nested(string):
     '''
 
     stack = []
-    has_nested = False
+    nested = False
     
     for char in string:
         if char == '[':
             stack.append(char)
             if len(stack) > 1:
-                has_nested = True
+                nested = True
         elif char == ']':
             if not stack:
                 return False
             stack.pop()
     
-    return has_nested and not stack
+    return nested and not stack
 
 def check(candidate):
 

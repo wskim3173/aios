@@ -13,11 +13,17 @@ def encrypt(s):
 
     encrypted = ""
     for char in s:
-        if char.isalpha():
-            shift = (ord(char) - ord('a') + 4) % 26 + ord('a')
-            encrypted += chr(shift)
+        if char.isalpha():  # Check if the character is a letter
+            shifted = ord(char) + 4  # Shift the character by 4 places
+            if char.islower():  # Handle lowercase letters
+                if shifted > ord('z'):
+                    shifted -= 26  # Wrap around if it goes past 'z'
+            elif char.isupper():  # Handle uppercase letters
+                if shifted > ord('Z'):
+                    shifted -= 26  # Wrap around if it goes past 'Z'
+            encrypted += chr(shifted)  # Convert back to character
         else:
-            encrypted += char
+            encrypted += char  # Keep non-letter characters unchanged
     return encrypted
 
 def check(candidate):

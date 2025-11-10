@@ -10,11 +10,10 @@ def monotonic(l: list):
     True
     """
 
-    if len(l) < 2:
+    if not l:  # Check if the list is empty
         return True
-
     increasing = decreasing = True
-
+    
     for i in range(1, len(l)):
         if l[i] > l[i - 1]:
             decreasing = False

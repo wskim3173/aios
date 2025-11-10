@@ -9,17 +9,12 @@ def circular_shift(x, shift):
     "12"
     """
 
-    x_str = str(x)
-    length = len(x_str)
-    
-    if shift > length:
-        shift = shift % length
-    
+    s = str(x)
+    n = len(s)
+    shift = shift % n
     if shift == 0:
-        return x_str
-    
-    shifted = x_str[-shift:] + x_str[:-shift]
-    return shifted
+        return s
+    return s[-shift:] + s[:-shift]
 
 def check(candidate):
 

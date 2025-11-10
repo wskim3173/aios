@@ -16,10 +16,10 @@ def special_factorial(n):
         return 1
     result = 1
     for i in range(1, n + 1):
-        fact = 1
+        factorial = 1
         for j in range(1, i + 1):
-            fact *= j
-        result *= fact
+            factorial *= j
+        result *= factorial
     return result
 
 def check(candidate):

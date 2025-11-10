@@ -12,11 +12,11 @@ def simplify(x, n):
     simplify("7/10", "10/2") = False
     """
 
-    x_numerator, x_denominator = map(int, x.split('/'))
-    n_numerator, n_denominator = map(int, n.split('/'))
+    num_x, denom_x = map(int, x.split('/'))
+    num_n, denom_n = map(int, n.split('/'))
     
-    result_numerator = x_numerator * n_numerator
-    result_denominator = x_denominator * n_denominator
+    result_numerator = num_x * num_n
+    result_denominator = denom_x * denom_n
     
     return result_numerator % result_denominator == 0
 

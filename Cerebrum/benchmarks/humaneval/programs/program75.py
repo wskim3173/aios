@@ -16,10 +16,11 @@ def is_multiply_prime(a):
                 return False
         return True
 
-    for i in range(2, a):
-        for j in range(2, a):
-            for k in range(2, a):
-                if i * j * k == a and is_prime(i) and is_prime(j) and is_prime(k):
+    primes = [i for i in range(2, 100) if is_prime(i)]
+    for i in range(len(primes)):
+        for j in range(i, len(primes)):
+            for k in range(j, len(primes)):
+                if primes[i] * primes[j] * primes[k] == a:
                     return True
     return False
 

@@ -9,7 +9,11 @@ def solution(lst):
     solution([30, 13, 24, 321]) ==>0
     """
 
-    return sum(lst[i] for i in range(0, len(lst), 2) if lst[i] % 2 != 0)
+    total = 0
+    for i in range(0, len(lst), 2):
+        if lst[i] % 2 != 0:
+            total += lst[i]
+    return total
 
 def check(candidate):
 

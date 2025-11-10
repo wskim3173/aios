@@ -17,7 +17,8 @@ def prime_length(string):
                 return False
         return True
 
-    return is_prime(len(string))
+    length = len(string)
+    return is_prime(length)
 
 def check(candidate):
 

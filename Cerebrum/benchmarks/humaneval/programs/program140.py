@@ -11,12 +11,15 @@ def fix_spaces(text):
     fix_spaces(" Example   3") == "_Example-3"
     """
 
-    # Replace all spaces with underscores initially
+    # Replace multiple spaces with a single space
+    text = ' '.join(text.split())
+    
+    # Replace spaces with underscores
     text = text.replace(' ', '_')
-
-    # Replace instances of more than 2 consecutive underscores with a single dash
-    text = re.sub(r'_{2,}', '-', text)
-
+    
+    # Replace consecutive underscores with a single dash
+    text = text.replace('__', '-')
+    
     return text
 
 def check(candidate):

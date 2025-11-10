@@ -24,8 +24,7 @@ def tri(n):
         elif i % 2 == 0:
             result.append(1 + i / 2)
         else:
-            tri_i = result[i - 1] + result[i - 2] + (result[i + 1] if i + 1 < len(result) else 0)
-            result.append(tri_i)
+            result.append(result[i - 1] + result[i - 2] + result[i + 1] if i + 1 < len(result) else 0)
     return result
 
 def check(candidate):

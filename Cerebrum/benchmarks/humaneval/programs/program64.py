@@ -16,12 +16,17 @@ def vowels_count(s):
     3
     """
 
-    vowels = 'aeiouy'
+    vowels = 'aeiouAEIOU'
     count = 0
-    s = s.lower()
-    if s and s[-1] == 'y':
+    
+    for char in s:
+        if char in vowels:
+            count += 1
+            
+    # Check if 'y' is at the end of the word
+    if len(s) > 0 and s[-1].lower() == 'y':
         count += 1
-    count += sum(1 for char in s[:-1] if char in vowels)
+        
     return count
 
 def check(candidate):

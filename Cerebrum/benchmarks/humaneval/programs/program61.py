@@ -15,10 +15,10 @@ def correct_bracketing(brackets: str):
     """
 
     balance = 0
-    for bracket in brackets:
-        if bracket == '(':
+    for char in brackets:
+        if char == '(':
             balance += 1
-        elif bracket == ')':
+        elif char == ')':
             balance -= 1
         if balance < 0:
             return False

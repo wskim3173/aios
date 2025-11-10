@@ -11,29 +11,20 @@ def int_to_mini_roman(number):
     >>> int_to_mini_roman(426) == 'cdxxvi'
     """
 
-    if number < 1 or number > 1000:
-        raise ValueError("Number must be between 1 and 1000.")
-    
     val = [
-        1000, 900, 500, 400,
-        100, 90, 50, 40,
-        10, 9, 5, 4,
-        1
+        (1000, 'm'), (900, 'cm'), (500, 'd'), (400, 'cd'),
+        (100, 'c'), (90, 'xc'), (50, 'l'), (40, 'xl'),
+        (10, 'x'), (9, 'ix'), (5, 'v'), (4, 'iv'),
+        (1, 'i')
     ]
-    syms = [
-        "m", "cm", "d", "cd",
-        "c", "xc", "l", "xl",
-        "x", "ix", "v", "iv",
-        "i"
-    ]
+    result = ""
     
-    roman_num = ''
-    for i in range(len(val)):
-        count = number // val[i]
-        roman_num += syms[i] * count
-        number -= val[i] * count
-        
-    return roman_num
+    for (arabic, roman) in val:
+        while number >= arabic:
+            result += roman
+            number -= arabic
+            
+    return result
 
 def check(candidate):
 

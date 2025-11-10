@@ -6,12 +6,12 @@ def starts_one_ends(n):
     """
 
     if n == 1:
-        return 2  # The numbers are 1 and 1, both start and end with 1.
-    
-    start_count = 10**(n-1) - 10**(n-2)  # Count of n-digit numbers starting with 1
-    end_count = 10**(n-1) - 10**(n-2)    # Count of n-digit numbers ending with 1
-    
-    return start_count + end_count
+        return 1  # only the number 1 itself
+    else:
+        start_count = 9 * (10 ** (n - 2))  # numbers starting with 1 (1xxxx)
+        end_count = 10 ** (n - 1)           # numbers ending with 1 (xxxx1)
+        overlap_count = 1                    # the number 1 is counted in both
+        return start_count + end_count - overlap_count
 
 def check(candidate):
 

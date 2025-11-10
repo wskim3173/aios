@@ -14,6 +14,9 @@ def modp(n: int, p: int):
     1
     """
 
+    if p <= 1:
+        raise ValueError("p must be greater than 1")
+    
     return pow(2, n, p)
 
 

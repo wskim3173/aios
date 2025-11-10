@@ -32,32 +32,36 @@ def minPath(grid, k):
 
     from collections import deque
 
-    def bfs(start_row, start_col):
-        queue = deque([(start_row, start_col, [grid[start_row][start_col]])])
+    N = len(grid)
+    directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+    
+    def bfs(start_x, start_y):
+        queue = deque([(start_x, start_y, [grid[start_x][start_y]])])
         min_path = None
-        
+
         while queue:
-            row, col, path = queue.popleft()
+            x, y, path = queue.popleft()
+
             if len(path) == k:
                 if min_path is None or path < min_path:
                     min_path = path
                 continue
-                
-            for r_offset, c_offset in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                new_row, new_col = row + r_offset, col + c_offset
-                if 0 <= new_row < len(grid) and 0 <= new_col < len(grid[0]):
-                    queue.append((new_row, new_col, path + [grid[new_row][new_col]]))
+            
+            for dx, dy in directions:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < N and 0 <= ny < N:
+                    queue.append((nx, ny, path + [grid[nx][ny]]))
         
         return min_path
 
-    overall_min_path = None
-    for r in range(len(grid)):
-        for c in range(len(grid[0])):
-            path = bfs(r, c)
-            if path is not None and (overall_min_path is None or path < overall_min_path):
-                overall_min_path = path
+    result = None
+    for i in range(N):
+        for j in range(N):
+            path = bfs(i, j)
+            if result is None or path < result:
+                result = path
 
-    return overall_min_path
+    return result
 
 def check(candidate):
 

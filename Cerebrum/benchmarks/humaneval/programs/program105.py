@@ -25,16 +25,20 @@ def by_length(arr):
     if not arr:
         return []
     
-    # Filter out integers between 1 and 9
-    filtered_arr = [num for num in arr if 1 <= num <= 9]
+    # Filter and sort the valid integers
+    valid_numbers = sorted(num for num in arr if 1 <= num <= 9)
     
-    # Sort and reverse the array
-    filtered_arr.sort()
-    filtered_arr.reverse()
+    # Reverse the sorted list
+    valid_numbers.reverse()
     
-    # Map integers to their corresponding names
-    number_names = ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"]
-    result = [number_names[num - 1] for num in filtered_arr]
+    # Mapping of numbers to their names
+    number_to_name = {
+        1: "One", 2: "Two", 3: "Three", 4: "Four",
+        5: "Five", 6: "Six", 7: "Seven", 8: "Eight", 9: "Nine"
+    }
+    
+    # Replace numbers with their corresponding names
+    result = [number_to_name[num] for num in valid_numbers]
     
     return result
 

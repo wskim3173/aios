@@ -14,7 +14,7 @@ def sum_squares(lst):
 
     """
 
-    return sum(int(-(-x // 1)) ** 2 for x in lst)
+    return sum((int(num) + (num != int(num))) ** 2 for num in lst)
 
 def check(candidate):
 

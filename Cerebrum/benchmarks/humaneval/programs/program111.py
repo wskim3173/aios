@@ -13,16 +13,16 @@ def histogram(test):
 
     """
 
-    from collections import Counter
-    
     if not test:
         return {}
     
-    letters = test.split()
-    count = Counter(letters)
+    from collections import Counter
     
-    max_count = max(count.values())
-    result = {letter: cnt for letter, cnt in count.items() if cnt == max_count}
+    letters = test.split()
+    counts = Counter(letters)
+    
+    max_count = max(counts.values())
+    result = {letter: count for letter, count in counts.items() if count == max_count}
     
     return result
 

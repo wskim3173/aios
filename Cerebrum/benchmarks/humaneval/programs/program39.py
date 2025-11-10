@@ -23,14 +23,14 @@ def prime_fib(n: int):
                 return False
         return True
 
-    fib1, fib2 = 0, 1
-    count = 0
-    while True:
-        fib1, fib2 = fib2, fib1 + fib2
-        if is_prime(fib2):
-            count += 1
-            if count == n:
-                return fib2
+    fibs = []
+    a, b = 0, 1
+    while len(fibs) < n:
+        a, b = b, a + b
+        if is_prime(a):
+            fibs.append(a)
+
+    return fibs[-1]
 
 
 

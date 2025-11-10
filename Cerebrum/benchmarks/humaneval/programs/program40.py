@@ -19,19 +19,13 @@ def triples_sum_to_zero(l: list):
     """
 
     n = len(l)
-    l.sort()
-    
-    for i in range(n - 2):
-        left, right = i + 1, n - 1
-        while left < right:
-            total = l[i] + l[left] + l[right]
-            if total == 0:
+    for i in range(n):
+        seen = set()
+        for j in range(i + 1, n):
+            complement = - (l[i] + l[j])
+            if complement in seen:
                 return True
-            elif total < 0:
-                left += 1
-            else:
-                right -= 1
-                
+            seen.add(l[j])
     return False
 
 

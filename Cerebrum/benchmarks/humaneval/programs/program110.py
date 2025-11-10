@@ -13,12 +13,10 @@ def exchange(lst1, lst2):
     It is assumed that the input lists will be non-empty.
     """
 
-    odd_count = sum(1 for num in lst1 if num % 2 != 0)
-    has_even_in_lst2 = any(num % 2 == 0 for num in lst2)
+    odd_in_lst1 = any(num % 2 != 0 for num in lst1)
+    even_in_lst2 = any(num % 2 == 0 for num in lst2)
     
-    if odd_count == 0:
-        return "YES"
-    if odd_count > 0 and has_even_in_lst2:
+    if not odd_in_lst1 or (odd_in_lst1 and even_in_lst2):
         return "YES"
     
     return "NO"

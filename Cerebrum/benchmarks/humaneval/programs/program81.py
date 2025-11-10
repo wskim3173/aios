@@ -26,7 +26,6 @@ def numerical_letter_grade(grades):
     """
 
     letter_grades = []
-    
     for gpa in grades:
         if gpa == 4.0:
             letter_grades.append('A+')

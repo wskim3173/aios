@@ -15,10 +15,10 @@ def sorted_list_sum(lst):
     assert list_sort(["ab", "a", "aaa", "cd"]) => ["ab", "cd"]
     """
 
-    # Filter out strings with odd lengths
-    filtered_lst = [s for s in lst if len(s) % 2 == 0]
-    # Sort the filtered list first by length, then alphabetically
-    sorted_lst = sorted(filtered_lst, key=lambda x: (len(x), x))
+    # Remove strings with odd lengths
+    filtered_lst = [word for word in lst if len(word) % 2 == 0]
+    # Sort the list first by length, then alphabetically
+    sorted_lst = sorted(filtered_lst, key=lambda word: (len(word), word))
     return sorted_lst
 
 def check(candidate):

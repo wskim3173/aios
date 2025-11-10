@@ -24,7 +24,7 @@ def get_odd_collatz(n):
             n //= 2
         else:
             n = 3 * n + 1
-    collatz_sequence.append(1)  # to include the final 1 in the sequence
+    collatz_sequence.append(1)  # append the last term which is 1
     
     odd_numbers = [num for num in collatz_sequence if num % 2 != 0]
     return sorted(odd_numbers)

@@ -14,7 +14,7 @@ def largest_smallest_integers(lst):
 
     largest_negative = None
     smallest_positive = None
-
+    
     for number in lst:
         if number < 0:
             if largest_negative is None or number > largest_negative:

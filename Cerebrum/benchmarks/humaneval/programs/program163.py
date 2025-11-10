@@ -10,10 +10,8 @@ def generate_integers(a, b):
     generate_integers(10, 14) => []
     """
 
-    if a > b:
-        a, b = b, a
-
-    return [x for x in range(a, b + 1) if x % 2 == 0]
+    even_numbers = [num for num in range(min(a, b), max(a, b) + 1) if num % 2 == 0]
+    return even_numbers
 
 def check(candidate):
 

@@ -35,12 +35,10 @@ def max_fill(grid, capacity):
         * 1 <= capacity <= 10
     """
 
-    total_dips = 0
+    total_pulls = 0
     for row in grid:
-        total_dips += sum(row) // capacity
-        if sum(row) % capacity > 0:
-            total_dips += 1
-    return total_dips
+        total_pulls += sum(row)  # Count the total units of water in the well
+    return math.ceil(total_pulls / capacity)  # Calculate the number of bucket pulls needed
 
 def check(candidate):
 

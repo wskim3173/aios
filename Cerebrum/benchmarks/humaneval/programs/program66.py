@@ -13,11 +13,7 @@ def digitSum(s):
         digitSum("aAaaaXa") => 153
     """
 
-    total = 0
-    for char in s:
-        if char.isupper():
-            total += ord(char)
-    return total
+    return sum(ord(char) for char in s if char.isupper())
 
 def check(candidate):
 

@@ -13,15 +13,13 @@ def search(lst):
 
     frequency = {}
     for num in lst:
-        if num in frequency:
-            frequency[num] += 1
-        else:
-            frequency[num] = 1
+        if num > 0:
+            frequency[num] = frequency.get(num, 0) + 1
 
     result = -1
-    for num in range(1, max(lst) + 1):
-        if num in frequency and frequency[num] >= num:
-            result = num
+    for num in frequency:
+        if frequency[num] >= num:
+            result = max(result, num)
 
     return result
 

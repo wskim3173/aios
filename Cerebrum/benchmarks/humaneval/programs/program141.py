@@ -14,22 +14,19 @@ def file_name_check(file_name):
     file_name_check("1example.dll") # => 'No' (the name should start with a latin alphapet letter)
     """
 
-    if not isinstance(file_name, str):
-        return 'No'
-    
     if file_name.count('.') != 1:
         return 'No'
     
-    name_part, extension_part = file_name.split('.')
+    name, extension = file_name.split('.')
     
-    if len(name_part) == 0 or not name_part[0].isalpha():
+    if not name or not name[0].isalpha():
         return 'No'
     
-    digit_count = sum(char.isdigit() for char in name_part)
+    digit_count = sum(c.isdigit() for c in name)
     if digit_count > 3:
         return 'No'
     
-    if extension_part not in ['txt', 'exe', 'dll']:
+    if extension not in ['txt', 'exe', 'dll']:
         return 'No'
     
     return 'Yes'

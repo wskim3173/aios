@@ -10,11 +10,10 @@ def cycpattern_check(a , b):
 
     """
 
-    for i in range(len(b)):
-        if b in a:
-            return True
-        b = b[1:] + b[0]  # Rotate the string
-    return False
+    if len(b) > len(a):
+        return False
+    doubled_b = b + b
+    return any(doubled_b[i:i+len(b)] in a for i in range(len(b)))
 
 def check(candidate):
 

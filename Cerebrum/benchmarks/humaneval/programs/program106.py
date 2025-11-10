@@ -17,8 +17,8 @@ def f(n):
                 factorial *= j
             result.append(factorial)
         else:
-            summation = sum(range(1, i + 1))
-            result.append(summation)
+            sum_of_numbers = sum(range(1, i + 1))
+            result.append(sum_of_numbers)
     return result
 
 def check(candidate):

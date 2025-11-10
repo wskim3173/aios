@@ -13,9 +13,8 @@ def check_if_last_char_is_a_letter(txt):
     check_if_last_char_is_a_letter("") ➞ False 
     '''
 
-    if not txt:  # Check if the string is empty
+    if not txt or txt[-1] == ' ':
         return False
-    txt = txt.rstrip()  # Remove trailing spaces
     return txt[-1].isalpha() and (len(txt) == 1 or txt[-2] == ' ')
 
 def check(candidate):

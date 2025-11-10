@@ -22,10 +22,11 @@ def skjkasdkd(lst):
         return True
 
     largest_prime = -1
+    
     for number in lst:
         if is_prime(number) and number > largest_prime:
             largest_prime = number
-
+            
     if largest_prime == -1:
         return 0
 

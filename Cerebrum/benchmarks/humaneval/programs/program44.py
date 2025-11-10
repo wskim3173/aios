@@ -19,7 +19,7 @@ def change_base(x: int, base: int):
     while x > 0:
         digits.append(str(x % base))
         x //= base
-    
+        
     return ''.join(digits[::-1])
 
 

@@ -12,25 +12,17 @@ def compare_one(a, b):
     compare_one("1", 1) ➞ None
     """
 
-    # Function to convert string representations of numbers into floats.
-    def to_float(value):
+    def parse_value(value):
         if isinstance(value, str):
             value = value.replace(',', '.')
-        return float(value)
-    
-    # Check if the two values are equal
-    if a == b:
+        return float(value) if isinstance(value, (int, float, str)) and value.replace('.', '', 1).replace(',', '', 1).isdigit() else value
+
+    a_parsed = parse_value(a)
+    b_parsed = parse_value(b)
+
+    if a_parsed == b_parsed:
         return None
-
-    # Convert both values to float for comparison
-    a_float = to_float(a)
-    b_float = to_float(b)
-
-    # Return the larger value while maintaining original type
-    if a_float > b_float:
-        return a
-    else:
-        return b
+    return a if a_parsed > b_parsed else b
 
 def check(candidate):
 

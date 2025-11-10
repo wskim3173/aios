@@ -27,7 +27,7 @@ def even_odd_palindrome(n):
     odd_count = 0
 
     for i in range(1, n + 1):
-        if str(i) == str(i)[::-1]:  # Check if the number is a palindrome
+        if str(i) == str(i)[::-1]:  # Check if i is a palindrome
             if i % 2 == 0:
                 even_count += 1
             else:

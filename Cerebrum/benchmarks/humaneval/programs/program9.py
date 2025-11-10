@@ -8,9 +8,6 @@ def rolling_max(numbers: List[int]) -> List[int]:
     [1, 2, 3, 3, 3, 4, 4]
     """
 
-    if not numbers:
-        return []
-    
     rolling_max_list = []
     current_max = float('-inf')
     
