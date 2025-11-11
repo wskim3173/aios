@@ -108,7 +108,7 @@ class BrowserUseAgent:
                 self.messages.append(message)
                 llms = [
                     {
-                        "name": "gpt-4o",
+                        "name": "gpt-4o-mini",
                         "backend": "openai",
                     }
                 ]
@@ -151,7 +151,7 @@ class BrowserUseAgent:
                 self.messages.append(message)
                 llms = [
                     {
-                        "name": "gpt-4o",
+                        "name": "gpt-4o-mini",
                         "backend": "openai",
                     }
                 ]

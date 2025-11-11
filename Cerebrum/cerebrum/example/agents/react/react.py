@@ -34,7 +34,7 @@ class ReActAgent:
         self.history_window = 10
         self.history = []
         self.workers = {
-            "browser_use_agent": BrowserUseAgent(),
+            "browser_use_agent": BrowserUseAgent(True),
             # "arxiv_search": AutoTool.from_preloaded("example/arxiv")
         }
     

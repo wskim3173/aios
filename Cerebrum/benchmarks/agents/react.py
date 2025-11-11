@@ -1,310 +1,146 @@
-from cerebrum.llm.apis import llm_chat, llm_chat_with_json_output, llm_chat_with_tool_call_output
+# benchmarks/agents/react.py
+from typing import Dict, Any, List, Optional
+import time
 
-from litellm import completion
-
-from benchmarks.utils import get_parser
-
-from datasets import load_dataset
-
-from dotenv import load_dotenv
-
-from typing import List, Dict, Any
-
-import asyncio
-
-import json
-
-import uuid
-
-from cerebrum.example.agents.browser_use_agent.agent import BrowserUseAgent
-from cerebrum.example.agents.code_executor.agent import CodeExecutor
-from cerebrum.example.agents.calculator_agent.agent import CalculatorAgent
-
+from cerebrum.llm.apis import llm_chat_with_json_output
 from cerebrum.utils import _parse_json_output
 
-from cerebrum.interface import AutoTool
-
-load_dotenv()
 
 class ReActAgent:
-    def __init__(self, on_aios: bool = True):
+    """
+    Minimal, tool-free ReAct agent.
+    - No external agents, no browser, no MCP, no code executor.
+    - Pure LLM self-refine loop (reason-only). 
+    - For HumanEval: returns ONLY the function body text.
+
+    Loop:
+      Reason  : propose/critique plan for implementation
+      (Act)   : internally revise the code draft (no external call)
+      Observe : reflect on issues and decide to finish or continue
+    """
+
+    def __init__(self, on_aios: bool = True, max_steps: int = 4):
         self.agent_name = "react"
         self.on_aios = on_aios
-        self.max_steps = 20
-        self.history_window = 10
-        self.history = []
-        
-        '''
-        self.workers = {
-            "browser_use_agent": BrowserUseAgent(),
-            # "arxiv_search": AutoTool.from_preloaded("example/arxiv")
-        }
-        '''#kws
+        self.max_steps = max_steps
+        self.history: List[Dict[str, Any]] = []
+        # LLM 라우팅(AIOS가 백엔드 선택). 필요시 모델 변경 가능.
+        self.llms = [{"name": "gpt-4o-mini", "backend": "openai"}]
 
-        self.workers = {}
+    # ---- Public API ----
+    def run_humaneval(self, prompt: str) -> str:
+        """
+        HumanEval 한 항목에 대해 최종 '함수 본문'만 반환.
+        """
+        code = self._react_reason_only(prompt)
+        return self._strip_code_fences(code).strip()
 
-    def run_humaneval(self, input_str: str) -> str:
-        system_prompt = (
-            "You are an AI assistant good at coding. "
-            "Return ONLY the code to insert at <CURRENT_CURSOR_POSITION> wrapped with:\n"
-            "<FINAL_ANSWER>\n...code...\n</FINAL_ANSWER>\n"
-            "No ``` fences. Keep correct Python indentation."
-        )
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": f"Given the following code:\n{input_str}\nComplete the function."}
-        ]
-        # ✅ AIOS 경유 (모델/백엔드 라우팅은 AIOS에 맡김)
-        resp = llm_chat(agent_name=self.agent_name, messages=messages)
-        text = resp["response"]["response_message"]
+    def run(self, task_input: str) -> Dict[str, Any]:
+        """
+        일반 태스크용. 최종 산출(코드나 답변)을 'final'에 담아 반환.
+        """
+        text = self._react_reason_only(task_input)
+        return {"agent_name": self.agent_name, "final": text}
 
-        # <FINAL_ANSWER> 파싱
-        s, e = "<FINAL_ANSWER>", "</FINAL_ANSWER>"
-        si, ei = text.find(s), text.find(e)
-        if si != -1 and ei != -1 and ei > si:
-            return text[si+len(s):ei].strip()
-        # 코드블록 제거 보정
+    # ---- Internal ----
+    def _react_reason_only(self, task_input: str) -> str:
+        """
+        외부 툴/에이전트 없이 LLM 자기점검 루프만으로 개선.
+        JSON I/O로 일관성 유지.
+        """
+        self.history.clear()
+
+        system_prompt = f"""You are a senior Python assistant solving a code-completion task.
+Follow a compact ReAct loop (Reason → Revise → Judge). 
+No external tools. You must end with a clean function BODY only (no def header if it is already present in prompt).
+
+## Task
+{task_input}
+
+## Rules
+- Think concisely about pitfalls (edge cases, complexity, off-by-one, empty inputs).
+- Produce or refine a candidate implementation (function BODY only).
+- Never include explanations in the final body.
+- When you are fully confident, set finish=true and stop.
+
+## JSON response schema (STRICT)
+{{
+  "observation": "what the previous draft did well/poorly (short)",
+  "reasoning":   "what to change or verify (short)",
+  "finish":      true or false,
+  "candidate":   "FUNCTION BODY ONLY (no ``` fences, no def line unless the prompt asks for body only inside the function)"
+}}
+"""
+
+        messages = [{"role": "system", "content": system_prompt}]
+        final_code = ""
+
+        for step in range(self.max_steps):
+            step_prompt = f"""History (latest first, up to 3):
+{self.history[-3:]}
+Return STRICT JSON with keys: observation, reasoning, finish, candidate."""
+            messages.append({"role": "user", "content": step_prompt})
+
+            response_format = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "react_reason_only",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "observation": {"type": "string"},
+                            "reasoning":   {"type": "string"},
+                            "finish":      {"type": "boolean"},
+                            "candidate":   {"type": "string"}
+                        },
+                        "required": ["observation", "reasoning", "finish", "candidate"]
+                    },
+                    "strict": True
+                }
+            }
+
+            resp = llm_chat_with_json_output(
+                agent_name=self.agent_name,
+                messages=messages,
+                llms=self.llms,
+                response_format=response_format
+            )
+
+            raw = resp["response"]["response_message"]
+            step_obj = _parse_json_output(raw) or {}
+
+            obs = (step_obj.get("observation") or "").strip()
+            rsn = (step_obj.get("reasoning") or "").strip()
+            fin = bool(step_obj.get("finish", False))
+            cand = (step_obj.get("candidate") or "").strip()
+
+            self.history.append({
+                "round": step,
+                "observation": obs,
+                "reasoning": rsn,
+                "finish": fin,
+                "candidate_len": len(cand)
+            })
+
+            # 최신 후보를 보정/보관
+            final_code = self._strip_code_fences(cand).strip()
+
+            if fin and final_code:
+                break
+
+            time.sleep(0.1)
+
+        # 최종 산출을 FINAL_ANSWER태그 형식으로 감싸 inference.py와 궁합 유지(필요시)
+        return f"<FINAL_ANSWER>\n{final_code}\n</FINAL_ANSWER>"
+
+    @staticmethod
+    def _strip_code_fences(text: str) -> str:
+        """
+        ``` 또는 ```python 코드펜스 제거.
+        """
         t = text.strip()
         if t.startswith("```"):
             t = t.strip("`")
             if t.startswith("python"):
                 t = t[len("python"):].lstrip()
-        return t.strip()
-
-    def run(self, task_input: str):
-        
-        llms = [    
-            {
-                "name": "gpt-4o-mini",
-                "backend": "openai"
-            }
-        ]
-        
-        WORKER_PROMPTS = """
-1. `self.workers["browser_use_agent"].run(task_input: str, start_url: str)`: Call the browser use agent to solve the given task and start from the given url.
-        """
-        
-        system_prompt = f"""# Task Orchestration Instructions
-
-You are an orchestrator agent responsible for coordinating specialized workers to solve complex tasks. Your goal is to break down the main task into subtasks and assign them to appropriate workers.
-
-## Main Task
-{task_input}
-
-## Available Workers
-{WORKER_PROMPTS}
-
-## Your Responsibilities:
-1. **Analyze the task** and break it down into logical subtasks
-2. **Assign subtasks** to appropriate workers from your available list
-3. **Coordinate the workflow** by processing each worker's output
-4. **Synthesize results** into a comprehensive solution
-5. **Verify completeness** before finalizing
-
-## Solution Requirements:
-- Provide detailed explanations for each step
-- Include specific implementations and examples where appropriate
-- Ensure your solution directly addresses the original task
-- If one approach fails, try alternative methods
-
-## Completion Protocol:
-- Before submitting your final answer, double-check that you've fully completed the task
-- Verify your solution against the original requirements
-- When you're confident the task is complete, format your answer as:
-  ```
-  <FINAL_ANSWER>[brief one-line summary of the task result]</FINAL_ANSWER>
-  ```
-- Only use the FINAL_ANSWER tag when the task is truly complete
-
-## Problem-Solving Tips:
-- Try multiple approaches if your first method fails
-- For web searches, check Wikipedia first before exploring other sources
-- When searching, use advanced filters when appropriate (date, location, etc.)
-- For math problems, consider using Python with the sympy library
-- Always verify your answers through cross-checking
-- Don't rely solely on your knowledge - use available tools
-- When executing code, debug any errors rather than assuming correct results
-- Search results rarely provide complete answers - use them to find sources for further analysis
-- For file downloads, use web browser simulation or write appropriate code"""
-        
-        messages = [
-            {"content": system_prompt, "role": "system"}
-        ]
-        
-        final_answer = ""
-        
-        # breakpoint()
-        rounds = 0
-        
-        while rounds < self.max_steps:
-            step_instructions = f"""
-## Step-by-Step Execution Protocol:
-Here are the latest {self.history_window} trajectory (at most) you have taken:
-<history>
-{self.history[-self.history_window:]}
-</history>
-
-Your output should be in json format, including the following fields:
-- `observation`: Do not over-confident about the correctness of the history actions. You should
-always check the current state to make sure the correctness of the next action.
-- `reasoning`: The reasoning about the next action you want to take, and the possible obstacles you may encounter, 
-and how to solve them. Do not forget to check the history actions to avoid the same mistakes.
-- `worker_name`: The name of the worker you want to use. It is only one step action
-without any other texts (such as annotation)
-- `worker_params`: The parameters for the worker. It is a dictionary containing the parameters for the worker.
-
-When you have recognized the task is completed, you need to output 
-
-Here is two example of the output:
-```json
-{{
-    "observation": "I have obtained the answer FeO is the densest iron oxide on the Moon...",
-    "reasoning": "Since I have already obtained the answer, I do not need to call any worker... ",
-    "worker_name": None,
-    "worker_params": None
-}}
-
-{{
-    "observation":  "At current stage, I have already opened the amazon website...",
-    "reasoning": "To proceed with the task of searching for iphone products, I need to complete...",
-    "worker_name": "browser_use_agent",
-    "worker_params": {{
-        "task_prompt": "search for the product 'iphone' on amazon",
-        "start_url": "https://www.amazon.com"
-    }}
-}}           """
-            messages.append({"content": step_instructions, "role": "user"})
-            
-            response_format = {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "orchestration",
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "observation": {"type": "string"},
-                            "reasoning": {"type": "string"},
-                            "worker_name": {"type": "string"},
-                            "worker_params": {"type": "object"}
-                        },
-                        "required": ["observation", "reasoning", "worker_name", "worker_params"]
-                    }
-                }
-            }
-            
-            response = llm_chat_with_json_output(
-                agent_name=self.agent_name,
-                messages=messages,
-                llms=llms,
-                response_format=response_format
-            )
-                        
-            step_response = response["response"]["response_message"]
-            
-            resp_dict = _parse_json_output(step_response)
-            observation = resp_dict.get("observation", "")
-            reasoning = resp_dict.get("reasoning", "")
-            worker_name = resp_dict.get("worker_name", None)
-            worker_params = resp_dict.get("worker_params", {})
-            
-            if worker_name is None:
-                if worker_params is {}:
-                    trajectory_info = {
-                        "round": rounds,
-                        "observation": observation,
-                        "thought": reasoning,
-                        "called_worker": worker_name,
-                        "called_worker_params": worker_params,
-                        "info": None
-                    }
-                    final_answer = self.get_final_answer(task_input)
-                
-                break
-                
-            else:
-                
-                worker_response = self.workers[worker_name].run(**worker_params)
-                
-                result = worker_response["result"]
-                
-                trajectory_info = {
-                    "round": rounds,
-                    "observation": observation,
-                    "thought": reasoning,
-                    "called_worker": worker_name,
-                    "called_worker_params": worker_params,
-                    "info": result
-                }
-                
-                print(trajectory_info)
-            
-                self.history.append(trajectory_info)
-                
-            rounds += 1
-        
-        return {
-            "agent_name": self.agent_name,
-            "result": final_answer,
-            "rounds": rounds
-        }
-    
-    def get_final_answer(self, task_input: str):
-        r"""Get the final answer based on the task prompt and current state.
-        It is used when the agent thinks that the task can be completed without any further action, and answer can be directly found in the current state.
-        """
-        system_prompt = """
-You are an extractor agent. Your job is to extract the final answer from the history and the task prompt.
-"""
-        prompt = f"""
-You are solving a complex task which needs multi-step interaction with different workers. After the multi-step observation, reasoning and acting taken by different workers, you thinkthe task is currently solved.
-Here are all trajectory we have taken:
-<history>{self.history}</history>
-Please find the final answer, or give valuable insights and founds (e.g. if previous actions contain downloading files, your output should include the path of the downloaded file) about the overall task: <task>{task_input}</task>
-        """
-
-        messages = [
-            {"content": system_prompt, "role": "system"},
-            {"content": prompt, "role": "user"}
-        ]
-        
-        llms = [
-            {
-                "name": "gpt-4o-mini",
-                "backend": "openai"
-            }
-        ]
-
-        response = llm_chat(
-            agent_name=self.agent_name,
-            messages=messages,
-            llms=llms
-        )
-        
-        return response["response"]["response_message"]
-
-def main():
-    agent = ReActAgent()
-    
-    data = {
-        "Question": """
-What is the temperature difference between Edison and New York today? 
-""",
-        "Tools": "1. Web browser, 2. Calculator"
-    }
-    
-    main_parser = get_parser()
-    main_args = main_parser.parse_args()
-    dataset = load_dataset(main_args.data_name, "2023_all", split=main_args.split)
-    
-    dataset = dataset["Question"]
-    
-    # for idx, question in enumerate(dataset):
-    #     result = agent.run(question)
-    #     print(result)
-    result = agent.run(data["Question"])
-    print(result)
-    
-if __name__ == "__main__":
-    
-    main()
-
+        return t

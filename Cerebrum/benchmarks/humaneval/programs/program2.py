@@ -10,10 +10,6 @@ def truncate_number(number: float) -> float:
     0.5
     """
 
-    integer_part = int(number)
-    decimal_part = number - integer_part
-    return decimal_part
-
 
 
 METADATA = {
