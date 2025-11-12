@@ -1,9 +1,11 @@
 from typing import Dict, Any, List
 import time
+import threading
 
 from cerebrum.llm.apis import llm_chat_with_json_output
 from cerebrum.utils import _parse_json_output
 
+from litellm import completion
 
 class ReActAgent:
     """
@@ -19,6 +21,7 @@ class ReActAgent:
         self.max_steps = max_steps
         self.history: List[Dict[str, Any]] = []
         self.llms = [{"name": "gpt-4o-mini", "backend": "openai"}]
+        self.t = threading.current_thread()
 
     # --- Core Loop ---
     def run_humaneval(self, task_input: str) -> str:
@@ -78,16 +81,45 @@ No external tools. You must end with a clean function BODY only (no def header).
 Return STRICT JSON with keys: observation, reasoning, finish, candidate."""
             messages.append({"role": "user", "content": step_prompt})
 
-            # --- AIOS 통한 JSON 응답 ---
-            resp = llm_chat_with_json_output(
-                agent_name=self.agent_name,
-                messages=messages,
-                llms=self.llms,
-                response_format=response_format
-            )
-            raw = resp["response"]["response_message"]
+            # --- Branch on AIOS ---
+            if self.on_aios:
+                # AIOS backend enforces JSON schema
+                resp = llm_chat_with_json_output(
+                    agent_name=self.agent_name,
+                    messages=messages,
+                    llms=self.llms,
+                    response_format=response_format
+                )
+                raw = resp["response"]["response_message"]
+            else:
+                # Non-AIOS: call litellm and extract plain text content
+                # We still *ask* for JSON in the prompt and parse it defensively.
+                non_aios_resp = completion(
+                    model="gpt-4o-mini",
+                    messages=messages,
+                    temperature=1.0,
+                    response_format=response_format
+                )
 
-            step_obj = _parse_json_output(raw) or {}
+                #print(f"Thread name: {self.t.name}, ID: {self.t.ident}, non_aios_resp: {non_aios_resp}")
+
+                if isinstance(non_aios_resp, str):
+                    raw = non_aios_resp
+                else:
+                    raw = (
+                        non_aios_resp.get("choices", [{}])[0]
+                                    .get("message", {})
+                                    .get("content")
+                    )
+                    if raw is None:
+                        raw = non_aios_resp.get("content", "")
+                raw = raw or ""
+            
+            #print(f"Thread name: {t.name}, ID: {t.ident}, Raw: {raw}")
+
+            step_obj = _parse_json_output(raw)
+
+            #print(f"Thread name: {t.name}, ID: {t.ident}, Step_obj: {step_obj}")
 
             obs = step_obj.get("observation").strip()
             rsn = step_obj.get("reasoning").strip()
