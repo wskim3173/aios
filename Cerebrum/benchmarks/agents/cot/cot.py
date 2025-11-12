@@ -1,11 +1,17 @@
 from cerebrum.llm.apis import llm_chat
+from cerebrum.config.config_manager import config
 
 from litellm import completion
+
+aios_kernel_url = config.get_kernel_url()
 
 class CoT:
     def __init__(self, on_aios: bool = True):
         self.agent_name = "llm"
         self.on_aios = on_aios
+        self.model = "qwen3:1.7b"
+        self.backend = "ollama"
+        self.llms = [{"name": self.model, "backend": self.backend}]
 
     def run_swebench(self, input_str: str):
         messages = [
@@ -16,7 +22,7 @@ class CoT:
             response = llm_chat(self.agent_name, messages)
         else:
             response = completion(
-                model="gpt-4o-mini",
+                model=self.model,
                 messages=messages,
                 temperature=0.0,
             )
@@ -55,11 +61,11 @@ class CoT:
         ]
 
         if self.on_aios:
-            response = llm_chat(self.agent_name, messages)
+            response = llm_chat(self.agent_name, messages, aios_kernel_url, self.llms)
             result = response["response"]["response_message"]
         else:
             response = completion(
-                model="gpt-4o-mini",
+                model=self.model,
                 messages=messages,
                 temperature=1.0,
             )
@@ -86,7 +92,7 @@ class CoT:
             response = llm_chat(self.agent_name, messages)
         else:
             response = completion(
-                model="gpt-4o-mini",
+                model=self.model,
                 messages=messages,
                 temperature=0.0,
             )

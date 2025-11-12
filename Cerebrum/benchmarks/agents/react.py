@@ -4,8 +4,11 @@ import threading
 
 from cerebrum.llm.apis import llm_chat_with_json_output
 from cerebrum.utils import _parse_json_output
+from cerebrum.config.config_manager import config
 
 from litellm import completion
+
+aios_kernel_url = config.get_kernel_url()
 
 class ReActAgent:
     """
@@ -19,8 +22,11 @@ class ReActAgent:
         self.agent_name = "react"
         self.on_aios = on_aios  # 기본: True
         self.max_steps = max_steps
+        self.model = "qwen3:1.7b"
+        self.backend = "ollama"
         self.history: List[Dict[str, Any]] = []
-        self.llms = [{"name": "gpt-4o-mini", "backend": "openai"}]
+        #self.llms = [{"name": "gpt-4o-mini", "backend": "openai"}]
+        self.llms = [{"name": self.model, "backend": self.backend}]
         self.t = threading.current_thread()
 
     # --- Core Loop ---
@@ -87,21 +93,21 @@ Return STRICT JSON with keys: observation, reasoning, finish, candidate."""
                 resp = llm_chat_with_json_output(
                     agent_name=self.agent_name,
                     messages=messages,
+                    base_url=aios_kernel_url,
                     llms=self.llms,
                     response_format=response_format
                 )
                 raw = resp["response"]["response_message"]
+
             else:
                 # Non-AIOS: call litellm and extract plain text content
                 # We still *ask* for JSON in the prompt and parse it defensively.
                 non_aios_resp = completion(
-                    model="gpt-4o-mini",
+                    model=self.model,
                     messages=messages,
                     temperature=1.0,
                     response_format=response_format
                 )
-
-                #print(f"Thread name: {self.t.name}, ID: {self.t.ident}, non_aios_resp: {non_aios_resp}")
 
                 if isinstance(non_aios_resp, str):
                     raw = non_aios_resp
@@ -114,12 +120,8 @@ Return STRICT JSON with keys: observation, reasoning, finish, candidate."""
                     if raw is None:
                         raw = non_aios_resp.get("content", "")
                 raw = raw or ""
-            
-            #print(f"Thread name: {t.name}, ID: {t.ident}, Raw: {raw}")
 
             step_obj = _parse_json_output(raw)
-
-            #print(f"Thread name: {t.name}, ID: {t.ident}, Step_obj: {step_obj}")
 
             obs = step_obj.get("observation").strip()
             rsn = step_obj.get("reasoning").strip()
