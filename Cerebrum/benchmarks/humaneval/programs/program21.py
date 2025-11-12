@@ -8,12 +8,10 @@ def rescale_to_unit(numbers: List[float]) -> List[float]:
     [0.0, 0.25, 0.5, 0.75, 1.0]
     """
 
-    min_num = min(numbers)
-    max_num = max(numbers)
-    range_num = max_num - min_num
-    if range_num == 0:
-        return [0.0] * len(numbers)
-    return [(num - min_num) / range_num for num in numbers]
+    min_val = min(numbers)
+    max_val = max(numbers)
+    return [(n - min_val) / (max_val - min_val) for n in numbers]
+
 
 
 

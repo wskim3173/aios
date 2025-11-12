@@ -13,20 +13,20 @@ def is_nested(string):
     is_nested('[[]][[') ➞ True
     '''
 
-    stack = []
-    nested = False
-    
-    for char in string:
-        if char == '[':
-            stack.append(char)
-            if len(stack) > 1:
-                nested = True
-        elif char == ']':
-            if not stack:
-                return False
-            stack.pop()
-    
-    return nested and not stack
+    def is_nested(string):
+        open_brackets = 0
+        nested_found = False
+        for char in string:
+            if char == '[':
+                open_brackets += 1
+                if open_brackets > 1:
+                    nested_found = True
+            elif char == ']':
+                if open_brackets == 0:
+                    return False
+                open_brackets -= 1
+        return nested_found and open_brackets == 0
+
 
 def check(candidate):
 

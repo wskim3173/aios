@@ -9,6 +9,7 @@ def is_equal_to_sum_even(n):
 
     return n >= 8 and n % 2 == 0
 
+
 def check(candidate):
     assert candidate(4) == False
     assert candidate(6) == False

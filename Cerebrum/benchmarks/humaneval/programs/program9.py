@@ -8,14 +8,13 @@ def rolling_max(numbers: List[int]) -> List[int]:
     [1, 2, 3, 3, 3, 4, 4]
     """
 
-    rolling_max_list = []
-    current_max = float('-inf')
-    
-    for number in numbers:
-        current_max = max(current_max, number)
-        rolling_max_list.append(current_max)
-    
-    return rolling_max_list
+    rolling_max = []
+    max_so_far = float('-inf')
+    for num in numbers:
+        max_so_far = max(max_so_far, num)
+        rolling_max.append(max_so_far)
+    return rolling_max
+
 
 
 

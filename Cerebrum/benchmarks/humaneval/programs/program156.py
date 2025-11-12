@@ -11,20 +11,8 @@ def int_to_mini_roman(number):
     >>> int_to_mini_roman(426) == 'cdxxvi'
     """
 
-    val = [
-        (1000, 'm'), (900, 'cm'), (500, 'd'), (400, 'cd'),
-        (100, 'c'), (90, 'xc'), (50, 'l'), (40, 'xl'),
-        (10, 'x'), (9, 'ix'), (5, 'v'), (4, 'iv'),
-        (1, 'i')
-    ]
-    result = ""
-    
-    for (arabic, roman) in val:
-        while number >= arabic:
-            result += roman
-            number -= arabic
-            
-    return result
+    val = [ ('m', 1000), ('d', 500), ('c', 100), ('l', 50), ('x', 10), ('v', 5), ('i', 1) ]; result = ''; for roman, integer in val: while number >= integer: result += roman; number -= integer; return result
+
 
 def check(candidate):
 

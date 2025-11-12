@@ -13,7 +13,8 @@ def iscube(a):
     iscube(180) ==> False
     '''
 
-    return round(a ** (1/3)) ** 3 == a
+    return int(round(a ** (1/3))) ** 3 == a
+
 
 def check(candidate):
 

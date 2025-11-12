@@ -15,7 +15,9 @@ def compare(game,guess):
     compare([0,5,0,0,0,4],[4,1,1,0,0,-2]) -> [4,4,1,0,0,6]
     """
 
-    return [abs(g - s) for g, s in zip(guess, game)]
+    def compare(game,guess):
+        return [abs(g - s) for g, s in zip(guess, game)]
+
 
 def check(candidate):
 

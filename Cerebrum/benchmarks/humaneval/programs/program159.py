@@ -29,9 +29,10 @@ def eat(number, need, remaining):
     Have fun :)
     """
 
-    total_eaten = number + min(need, remaining)
-    remaining_carrots = max(0, remaining - need)
-    return [total_eaten, remaining_carrots]
+    total_eaten = min(need, remaining) + number
+    remaining_after = remaining - total_eaten
+    return [total_eaten + number, remaining_after]
+
 
 def check(candidate):
 

@@ -17,17 +17,14 @@ def get_odd_collatz(n):
     get_odd_collatz(5) returns [1, 5] # The collatz sequence for 5 is [5, 16, 8, 4, 2, 1], so the odd numbers are only 1, and 5.
     """
 
-    collatz_sequence = []
+    result = []
     while n != 1:
-        collatz_sequence.append(n)
-        if n % 2 == 0:
-            n //= 2
-        else:
-            n = 3 * n + 1
-    collatz_sequence.append(1)  # append the last term which is 1
-    
-    odd_numbers = [num for num in collatz_sequence if num % 2 != 0]
-    return sorted(odd_numbers)
+        if n % 2 != 0:
+            result.append(n)
+        n = n // 2 if n % 2 == 0 else 3 * n + 1
+    result.append(1)
+    return sorted(result)
+
 
 def check(candidate):
 

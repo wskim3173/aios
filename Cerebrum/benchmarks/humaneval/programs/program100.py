@@ -14,16 +14,17 @@ def make_a_pile(n):
     [3, 5, 7]
     """
 
-    stones = []
+    result = []
     for i in range(n):
         if i == 0:
-            stones.append(n)
+            stones = n
+        elif n % 2 == 0:
+            stones += 2
         else:
-            if n % 2 == 0:
-                stones.append(stones[i-1] + 2)  # Next even number
-            else:
-                stones.append(stones[i-1] + 2)  # Next odd number
-    return stones
+            stones += 2
+        result.append(stones)
+    return result
+
 
 def check(candidate):
 

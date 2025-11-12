@@ -15,15 +15,15 @@ def sort_array(array):
     * sort_array([2, 4, 3, 0, 1, 5, 6]) => [6, 5, 4, 3, 2, 1, 0]
     """
 
-    if not array:  # Check if the array is empty
-        return []
-    
-    first_value = array[0]
-    last_value = array[-1]
-    total = first_value + last_value
+    def sort_array(array):
+        if not array:
+            return []
+        first, last = array[0], array[-1]
+        sorted_array = sorted(array)
+        if (first + last) % 2 == 0:
+            return sorted_array[::-1]
+        return sorted_array
 
-    sorted_array = sorted(array, reverse=(total % 2 == 0))
-    return sorted_array
 
 def check(candidate):
 

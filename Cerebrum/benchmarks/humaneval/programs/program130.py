@@ -17,15 +17,20 @@ def tri(n):
     tri(3) = [1, 3, 2, 8]
     """
 
-    result = []
-    for i in range(n + 1):
-        if i == 1:
-            result.append(3)
-        elif i % 2 == 0:
-            result.append(1 + i / 2)
-        else:
-            result.append(result[i - 1] + result[i - 2] + result[i + 1] if i + 1 < len(result) else 0)
-    return result
+    def tri(n):
+        result = []
+        for i in range(n + 1):
+            if i == 1:
+                result.append(3)
+            elif i % 2 == 0:
+                result.append(1 + i / 2)
+            else:
+                tri_n_minus_1 = result[i - 1] if i - 1 < len(result) else tri(i - 1)
+                tri_n_minus_2 = result[i - 2] if i - 2 < len(result) else tri(i - 2)
+                tri_n_plus_1 = result[i + 1] if i + 1 < len(result) else tri(i + 1)
+                result.append(tri_n_minus_1 + tri_n_minus_2 + tri_n_plus_1)
+        return result
+
 
 def check(candidate):
 

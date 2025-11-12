@@ -20,17 +20,16 @@ def skjkasdkd(lst):
             if n % i == 0:
                 return False
         return True
-
-    largest_prime = -1
     
+    largest_prime = None
     for number in lst:
-        if is_prime(number) and number > largest_prime:
-            largest_prime = number
-            
-    if largest_prime == -1:
-        return 0
+        if is_prime(number):
+            if largest_prime is None or number > largest_prime:
+                largest_prime = number
+    if largest_prime is not None:
+        return sum(int(digit) for digit in str(largest_prime))
+    return 0
 
-    return sum(int(digit) for digit in str(largest_prime))
 
 def check(candidate):
 

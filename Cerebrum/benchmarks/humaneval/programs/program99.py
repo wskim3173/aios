@@ -18,13 +18,12 @@ def closest_integer(value):
     return 15 and closest_integer("-14.5") should return -15.
     '''
 
-    num = float(value)
-    if num > 0:
-        return int(num + 0.5)
-    elif num < 0:
-        return int(num - 0.5)
+    value_float = float(value)
+    if value_float > 0:
+        return int(value_float + 0.5) if value_float % 1 >= 0.5 else int(value_float)
     else:
-        return 0
+        return int(value_float - 0.5) if value_float % 1 <= -0.5 else int(value_float)
+
 
 def check(candidate):
 

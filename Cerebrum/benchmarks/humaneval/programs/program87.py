@@ -20,14 +20,15 @@ def get_row(lst, x):
     get_row([[], [1], [1, 2, 3]], 3) == [(2, 2)]
     """
 
-    coordinates = []
-    for row_index, row in enumerate(lst):
-        for col_index, value in enumerate(row):
-            if value == x:
-                coordinates.append((row_index, col_index))
-    
-    coordinates.sort(key=lambda coord: (coord[0], -coord[1]))
-    return coordinates
+    def get_row(lst, x):
+        coords = []
+        for row in range(len(lst)):
+            for col in range(len(lst[row])):
+                if lst[row][col] == x:
+                    coords.append((row, col))
+        coords.sort(key=lambda item: (item[0], -item[1]))
+        return coords
+
 
 def check(candidate):
 

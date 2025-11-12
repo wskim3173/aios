@@ -14,12 +14,12 @@ def total_match(lst1, lst2):
     total_match(['4'], ['1', '2', '3', '4', '5']) ➞ ['4']
     '''
 
-    total_chars_lst1 = sum(len(s) for s in lst1)
-    total_chars_lst2 = sum(len(s) for s in lst2)
-    
-    if total_chars_lst1 < total_chars_lst2:
-        return lst1
-    return lst2
+    if lst1 and lst2:
+        sum1 = sum(len(s) for s in lst1)
+        sum2 = sum(len(s) for s in lst2)
+        return lst1 if sum1 <= sum2 else lst2
+    return []
+
 
 def check(candidate):
 

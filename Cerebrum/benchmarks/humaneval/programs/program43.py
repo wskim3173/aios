@@ -17,12 +17,14 @@ def pairs_sum_to_zero(l):
     False
     """
 
-    seen = set()
-    for number in l:
-        if -number in seen:
-            return True
-        seen.add(number)
-    return False
+    def pairs_sum_to_zero(l):
+        seen = set()
+        for num in l:
+            if -num in seen:
+                return True
+            seen.add(num)
+        return False
+
 
 
 

@@ -15,16 +15,18 @@ def get_closest_vowel(word):
     get_closest_vowel("ab") ==> ""
     """
 
-    vowels = "aeiouAEIOU"
-    closest_vowel = ""
-    
-    for i in range(len(word) - 2, 0, -1):
-        if word[i] in vowels:
-            if word[i - 1].isalpha() and word[i + 1].isalpha() and word[i - 1] not in vowels and word[i + 1] not in vowels:
-                closest_vowel = word[i]
-                break
-    
-    return closest_vowel
+    def get_closest_vowel(word):
+        vowels = 'aeiouAEIOU'
+        n = len(word)
+        for i in range(n - 1, 0, -1):
+            if word[i] in vowels:
+                for j in range(i - 1, 0, -1):
+                    if word[j] not in vowels:
+                        if j > 0 and word[j - 1] not in vowels:
+                            return word[i]
+                        break
+        return ''
+
 
 def check(candidate):
 

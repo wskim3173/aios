@@ -10,11 +10,13 @@ def sum_product(numbers: List[int]) -> Tuple[int, int]:
     (10, 24)
     """
 
-    total_sum = sum(numbers)
-    total_product = 1 if numbers else 0
+    sum_result = 0
+    product_result = 1
     for number in numbers:
-        total_product *= number
-    return total_sum, total_product
+        sum_result += number
+        product_result *= number
+    return (sum_result, product_result)
+
 
 
 

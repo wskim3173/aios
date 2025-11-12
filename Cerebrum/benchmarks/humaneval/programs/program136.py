@@ -12,18 +12,18 @@ def largest_smallest_integers(lst):
     largest_smallest_integers([0]) == (None, None)
     '''
 
-    largest_negative = None
-    smallest_positive = None
-    
-    for number in lst:
-        if number < 0:
-            if largest_negative is None or number > largest_negative:
-                largest_negative = number
-        elif number > 0:
-            if smallest_positive is None or number < smallest_positive:
-                smallest_positive = number
+    def largest_smallest_integers(lst):
+        largest_negative = None
+        smallest_positive = None
+        for num in lst:
+            if num < 0:
+                if largest_negative is None or num > largest_negative:
+                    largest_negative = num
+            elif num > 0:
+                if smallest_positive is None or num < smallest_positive:
+                    smallest_positive = num
+        return (largest_negative, smallest_positive)
 
-    return (largest_negative, smallest_positive)
 
 def check(candidate):
 

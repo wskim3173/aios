@@ -13,11 +13,13 @@ def fruit_distribution(s,n):
     fruit_distribution("100 apples and 1 oranges",120) -> 120 - 100 - 1 = 19
     """
 
-    import re
-    apple_count = int(re.search(r'(\d+) apples', s).group(1))
-    orange_count = int(re.search(r'(\d+) oranges', s).group(1))
-    mango_count = n - apple_count - orange_count
-    return mango_count
+    total_fruits = n
+    apples_and_oranges = s.split()[0].strip() + ' ' + s.split()[2].strip()
+    apples = int(apples_and_oranges.split()[0])
+    oranges = int(apples_and_oranges.split()[2])
+    mangoes = total_fruits - apples - oranges
+    return mangoes
+
 
 def check(candidate):
 

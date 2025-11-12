@@ -14,10 +14,15 @@ def modp(n: int, p: int):
     1
     """
 
-    if p <= 1:
-        raise ValueError("p must be greater than 1")
-    
-    return pow(2, n, p)
+    result = 1
+    base = 2 % p
+    while n > 0:
+        if n % 2 == 1:
+            result = (result * base) % p
+        base = (base * base) % p
+        n //= 2
+    return result
+
 
 
 

@@ -11,7 +11,8 @@ def sort_array(arr):
     >>> sort_array([1, 0, 2, 3, 4]) [0, 1, 2, 3, 4]
     """
 
-    return sorted(arr, key=lambda x: (bin(x).count('1'), x))
+    arr.sort(key=lambda x: (bin(x).count('1'), x))
+
 
 def check(candidate):
 

@@ -20,34 +20,27 @@ def valid_date(date):
     valid_date('06/04/2020') => False
     """
 
+    date = date.strip()
     if not date:
         return False
-    
-    parts = date.split('-')
-    
-    if len(parts) != 3:
+    if len(date) != 10 or date[2] != '-' or date[5] != '-':
         return False
-    
-    month, day, year = parts
-    
-    if not (month.isdigit() and day.isdigit() and year.isdigit()):
+    mm, dd, yyyy = date.split('-')
+    if not (mm.isdigit() and dd.isdigit() and yyyy.isdigit()):
         return False
-    
-    month = int(month)
-    day = int(day)
-    year = int(year)
-    
-    if month < 1 or month > 12:
+    mm, dd, yyyy = int(mm), int(dd), int(yyyy)
+    if mm < 1 or mm > 12:
         return False
-    
-    if month in [1, 3, 5, 7, 8, 10, 12]:
-        return 1 <= day <= 31
-    elif month in [4, 6, 9, 11]:
-        return 1 <= day <= 30
-    elif month == 2:
-        return 1 <= day <= 29  # Not considering leap years in this validation
-    
-    return False
+    if (mm in [1, 3, 5, 7, 8, 10, 12] and (dd < 1 or dd > 31)):
+        return False
+    if (mm in [4, 6, 9, 11] and (dd < 1 or dd > 30)):
+        return False
+    if (mm == 2 and (dd < 1 or dd > 29)):
+        return False
+    if (mm == 2 and dd == 29 and not (yyyy % 4 == 0 and (yyyy % 100 != 0 or yyyy % 400 == 0))):
+        return False
+    return True
+
 
 def check(candidate):
 

@@ -10,7 +10,8 @@ def derivative(xs: list):
     [2, 6]
     """
 
-    return [i * coeff for i, coeff in enumerate(xs)][1:]
+    return [i * coeff for i, coeff in enumerate(xs[1:], start=1)]
+
 
 
 

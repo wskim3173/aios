@@ -16,18 +16,27 @@ def vowels_count(s):
     3
     """
 
-    vowels = 'aeiouAEIOU'
-    count = 0
-    
-    for char in s:
-        if char in vowels:
+    def vowels_count(s):
+        vowels = 'aeiou'
+        count = 0
+        for char in s.lower():
+            if char in vowels:
+                count += 1
+        if s[-1].lower() == 'y' and len(s) > 0:
             count += 1
-            
-    # Check if 'y' is at the end of the word
-    if len(s) > 0 and s[-1].lower() == 'y':
-        count += 1
-        
-    return count
+        return count
+    
+    # Test Cases
+    print(vowels_count('abcde'))  # 2
+    print(vowels_count('ACEDY'))  # 3
+    print(vowels_count('xyz'))     # 0
+    print(vowels_count('fly'))     # 1
+    print(vowels_count('pYthOn'))  # 2
+    print(vowels_count('rhythm'))  # 0
+    print(vowels_count(''))        # 0
+    print(vowels_count(''))        # 0
+    print(vowels_count('bAy'))     # 1
+
 
 def check(candidate):
 

@@ -11,17 +11,15 @@ def search(lst):
         search([5, 5, 4, 4, 4]) == -1
     '''
 
-    frequency = {}
-    for num in lst:
-        if num > 0:
-            frequency[num] = frequency.get(num, 0) + 1
-
+    from collections import Counter
+    
+    frequency = Counter(lst)
     result = -1
-    for num in frequency:
+    for num in range(1, max(lst) + 1):
         if frequency[num] >= num:
             result = max(result, num)
-
     return result
+
 
 def check(candidate):
 

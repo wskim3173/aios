@@ -10,9 +10,8 @@ def multiply(a, b):
     multiply(14,-15) should return 20.
     """
 
-    unit_digit_a = abs(a) % 10
-    unit_digit_b = abs(b) % 10
-    return unit_digit_a * unit_digit_b
+    return (abs(a) % 10) * (abs(b) % 10)
+
 
 def check(candidate):
 

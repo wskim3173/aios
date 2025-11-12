@@ -22,25 +22,13 @@ def by_length(arr):
       return = ['One']
     """
 
-    if not arr:
-        return []
-    
-    # Filter and sort the valid integers
-    valid_numbers = sorted(num for num in arr if 1 <= num <= 9)
-    
-    # Reverse the sorted list
-    valid_numbers.reverse()
-    
-    # Mapping of numbers to their names
-    number_to_name = {
-        1: "One", 2: "Two", 3: "Three", 4: "Four",
-        5: "Five", 6: "Six", 7: "Seven", 8: "Eight", 9: "Nine"
-    }
-    
-    # Replace numbers with their corresponding names
-    result = [number_to_name[num] for num in valid_numbers]
-    
-    return result
+    def by_length(arr):
+        names = ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"]
+        filtered = [x for x in arr if 1 <= x <= 9]
+        sorted_arr = sorted(filtered)
+        reversed_arr = sorted_arr[::-1]
+        return [names[x - 1] for x in reversed_arr]
+
 
 def check(candidate):
 

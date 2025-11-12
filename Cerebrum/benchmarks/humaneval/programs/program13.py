@@ -8,9 +8,9 @@ def greatest_common_divisor(a: int, b: int) -> int:
     5
     """
 
-    while b:
-        a, b = b, a % b
+    while b: a, b = b, a % b
     return a
+
 
 
 

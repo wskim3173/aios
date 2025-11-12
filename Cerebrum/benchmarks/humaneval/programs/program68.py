@@ -34,22 +34,17 @@ def pluck(arr):
         * 0 <= node.value
     """
 
-    if not arr:
-        return []
-    
-    smallest_even = float('inf')
+    smallest_even = None
     smallest_index = -1
-
     for index, value in enumerate(arr):
-        if value % 2 == 0:  # Check if the value is even
-            if value < smallest_even:  # Found a smaller even value
+        if value % 2 == 0:
+            if smallest_even is None or value < smallest_even:
                 smallest_even = value
                 smallest_index = index
+    if smallest_even is not None:
+        return [smallest_even, smallest_index]
+    return []
 
-    if smallest_index == -1:  # No even values found
-        return []
-    
-    return [smallest_even, smallest_index]
 
 def check(candidate):
 

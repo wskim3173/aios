@@ -6,7 +6,8 @@ def triangle_area(a, h):
     7.5
     """
 
-    return 0.5 * a * h
+    return (a * h) / 2
+
 
 
 

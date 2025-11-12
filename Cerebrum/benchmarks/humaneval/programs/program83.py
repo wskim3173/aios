@@ -5,13 +5,16 @@ def starts_one_ends(n):
     positive integers that start or end with 1.
     """
 
-    if n == 1:
-        return 1  # only the number 1 itself
-    else:
-        start_count = 9 * (10 ** (n - 2))  # numbers starting with 1 (1xxxx)
-        end_count = 10 ** (n - 1)           # numbers ending with 1 (xxxx1)
-        overlap_count = 1                    # the number 1 is counted in both
-        return start_count + end_count - overlap_count
+    def starts_one_ends(n):
+        if n < 1:
+            return 0
+        if n == 1:
+            return 1
+        total_count = 9 * (10 ** (n - 1))
+        start_with_1 = 10 ** (n - 1)
+        end_with_1 = 10 ** (n - 1)
+        return total_count + start_with_1 + end_with_1 - 1
+
 
 def check(candidate):
 

@@ -8,14 +8,16 @@ def median(l: list):
     15.0
     """
 
-    l.sort()
-    n = len(l)
-    mid = n // 2
-    
-    if n % 2 == 0:
-        return (l[mid - 1] + l[mid]) / 2
-    else:
-        return l[mid]
+    def median(l: list):
+        if not l:
+            return None
+        l.sort()
+        n = len(l)
+        if n % 2 == 1:
+            return l[n // 2]
+        else:
+            return (l[n // 2 - 1] + l[n // 2]) / 2
+
 
 
 

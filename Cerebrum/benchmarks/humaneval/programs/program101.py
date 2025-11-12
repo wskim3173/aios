@@ -10,8 +10,9 @@ def words_string(s):
     """
 
     import re
-    words = re.split(r'[,\s]+', s.strip())
-    return words
+    
+    return [word.strip() for word in re.split(r'[,\s]+', s) if word.strip()]
+
 
 def check(candidate):
 

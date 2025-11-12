@@ -11,10 +11,12 @@ def solve(s):
     solve("#a@C") = "#A@c"
     """
 
-    if any(c.isalpha() for c in s):
-        return ''.join(c.swapcase() if c.isalpha() else c for c in s)
-    else:
-        return s[::-1]
+    def solve(s):
+        if any(c.isalpha() for c in s):
+            return ''.join(c.upper() if c.islower() else c.lower() for c in s)
+        else:
+            return s[::-1]
+
 
 def check(candidate):
 

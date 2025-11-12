@@ -10,17 +10,17 @@ def monotonic(l: list):
     True
     """
 
-    if not l:  # Check if the list is empty
-        return True
-    increasing = decreasing = True
-    
-    for i in range(1, len(l)):
-        if l[i] > l[i - 1]:
-            decreasing = False
-        elif l[i] < l[i - 1]:
-            increasing = False
+    def monotonic(l: list):
+        if not l:
+            return True
+        increasing = decreasing = True
+        for i in range(1, len(l)):
+            if l[i] < l[i - 1]:
+                increasing = False
+            if l[i] > l[i - 1]:
+                decreasing = False
+        return increasing or decreasing
 
-    return increasing or decreasing
 
 
 

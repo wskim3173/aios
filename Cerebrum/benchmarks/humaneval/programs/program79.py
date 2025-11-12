@@ -12,13 +12,8 @@ def decimal_to_binary(decimal):
     decimal_to_binary(32)   # returns "db100000db"
     """
 
-    if decimal == 0:
-        return "db0db"
-    binary = ""
-    while decimal > 0:
-        binary = str(decimal % 2) + binary
-        decimal //= 2
-    return "db" + binary + "db"
+    binary_str = bin(decimal)[2:]; return 'db' + binary_str + 'db'
+
 
 def check(candidate):
 

@@ -14,15 +14,17 @@ def correct_bracketing(brackets: str):
     False
     """
 
-    balance = 0
-    for char in brackets:
-        if char == '(':
-            balance += 1
-        elif char == ')':
-            balance -= 1
-        if balance < 0:
-            return False
-    return balance == 0
+    def correct_bracketing(brackets: str):
+        count = 0
+        for bracket in brackets:
+            if bracket == '(': 
+                count += 1
+            elif bracket == ')':
+                count -= 1
+            if count < 0:
+                return False
+        return count == 0
+
 
 
 

@@ -8,15 +8,16 @@ def digits(n):
     digits(235) == 15
     """
 
-    product = 1
-    has_odd = False
-    
-    for digit in str(n):
-        if int(digit) % 2 != 0:
-            product *= int(digit)
-            has_odd = True
-            
-    return product if has_odd else 0
+    def digits(n):
+        product = 1
+        has_odd = False
+        for digit in str(n):
+            d = int(digit)
+            if d % 2 != 0:
+                product *= d
+                has_odd = True
+        return product if has_odd else 0
+
 
 def check(candidate):
 

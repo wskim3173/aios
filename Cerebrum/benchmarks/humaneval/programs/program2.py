@@ -10,6 +10,9 @@ def truncate_number(number: float) -> float:
     0.5
     """
 
+    return number - int(number)
+
+
 
 
 METADATA = {

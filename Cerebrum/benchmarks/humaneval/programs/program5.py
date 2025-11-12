@@ -11,14 +11,15 @@ def intersperse(numbers: List[int], delimeter: int) -> List[int]:
 
     if not numbers:
         return []
-    
+    if len(numbers) == 1:
+        return numbers
     result = []
-    for i in range(len(numbers) - 1):
-        result.append(numbers[i])
+    for num in numbers[:-1]:
+        result.append(num)
         result.append(delimeter)
     result.append(numbers[-1])
-    
     return result
+
 
 
 

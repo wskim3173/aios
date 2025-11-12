@@ -10,12 +10,14 @@ def split_words(txt):
     split_words("abcdef") == 3 
     '''
 
-    if ' ' in txt:
-        return txt.split()
-    elif ',' in txt:
-        return txt.split(',')
-    else:
-        return sum(1 for char in txt if char.islower() and (ord(char) - ord('a')) % 2 == 0)
+    def split_words(txt):
+        if ' ' in txt:
+            return txt.split()
+        elif ',' in txt:
+            return txt.split(',')
+        else:
+            return sum(1 for ch in txt if 'a' <= ch <= 'z' and (ord(ch) - ord('a')) % 2 == 0)
+
 
 def check(candidate):
 

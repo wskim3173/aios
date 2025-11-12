@@ -15,8 +15,8 @@ def triangle_area(a, b, c):
         s = (a + b + c) / 2
         area = (s * (s - a) * (s - b) * (s - c)) ** 0.5
         return round(area, 2)
-    else:
-        return -1
+    return -1
+
 
 def check(candidate):
 

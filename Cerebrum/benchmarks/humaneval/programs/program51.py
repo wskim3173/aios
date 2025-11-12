@@ -17,8 +17,9 @@ def remove_vowels(text):
     'zbcd'
     """
 
-    vowels = 'aeiouAEIOU'
-    return ''.join(char for char in text if char not in vowels)
+    result = ''.join(char for char in text if char.lower() not in 'aeiou')
+    return result
+
 
 
 

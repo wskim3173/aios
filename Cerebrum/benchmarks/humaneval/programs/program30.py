@@ -8,7 +8,8 @@ def get_positive(l: list):
     [5, 3, 2, 3, 9, 123, 1]
     """
 
-    return [num for num in l if num > 0]
+    return [x for x in l if x > 0]
+
 
 
 

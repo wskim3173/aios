@@ -10,14 +10,15 @@ def count_nums(arr):
     >>> count_nums([1, 1, 2]) == 3
     """
 
-    def sum_of_digits(n):
-        return sum(int(digit) if n >= 0 else -int(digit) for digit in str(abs(n)))
+    def count_nums(arr):
+        def sum_of_digits(n):
+            return sum(int(d) for d in str(abs(n))) if n != 0 else 0
+        count = 0
+        for num in arr:
+            if sum_of_digits(num) > 0:
+                count += 1
+        return count
 
-    count = 0
-    for num in arr:
-        if sum_of_digits(num) > 0:
-            count += 1
-    return count
 
 def check(candidate):
 

@@ -8,7 +8,9 @@ def count_distinct_characters(string: str) -> int:
     4
     """
 
-    return len(set(string.lower()))
+    distinct_characters = set(string.lower())
+    return len(distinct_characters)
+
 
 
 

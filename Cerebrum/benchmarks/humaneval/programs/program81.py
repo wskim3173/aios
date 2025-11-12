@@ -25,36 +25,36 @@ def numerical_letter_grade(grades):
     grade_equation([4.0, 3, 1.7, 2, 3.5]) ==> ['A+', 'B', 'C-', 'C', 'A-']
     """
 
-    letter_grades = []
+    grades_list = []
     for gpa in grades:
         if gpa == 4.0:
-            letter_grades.append('A+')
+            grades_list.append('A+')
         elif gpa > 3.7:
-            letter_grades.append('A')
+            grades_list.append('A')
         elif gpa > 3.3:
-            letter_grades.append('A-')
+            grades_list.append('A-')
         elif gpa > 3.0:
-            letter_grades.append('B+')
+            grades_list.append('B+')
         elif gpa > 2.7:
-            letter_grades.append('B')
+            grades_list.append('B')
         elif gpa > 2.3:
-            letter_grades.append('B-')
+            grades_list.append('B-')
         elif gpa > 2.0:
-            letter_grades.append('C+')
+            grades_list.append('C+')
         elif gpa > 1.7:
-            letter_grades.append('C')
+            grades_list.append('C')
         elif gpa > 1.3:
-            letter_grades.append('C-')
+            grades_list.append('C-')
         elif gpa > 1.0:
-            letter_grades.append('D+')
+            grades_list.append('D+')
         elif gpa > 0.7:
-            letter_grades.append('D')
+            grades_list.append('D')
         elif gpa > 0.0:
-            letter_grades.append('D-')
+            grades_list.append('D-')
         else:
-            letter_grades.append('E')
-    
-    return letter_grades
+            grades_list.append('E')
+    return grades_list
+
 
 def check(candidate):
 

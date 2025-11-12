@@ -16,14 +16,17 @@ def is_sorted(lst):
     is_sorted([1, 2, 2, 2, 3, 4]) ➞ False
     '''
 
-    seen = set()
-    for i in range(len(lst) - 1):
-        if lst[i] > lst[i + 1]:  # Check if the current element is greater than the next
-            return False
-        if lst[i] in seen:  # Check for duplicates
-            return False
-        seen.add(lst[i])
-    return True
+    def is_sorted(lst):
+        seen = set()
+        for i in range(len(lst)):
+            if i > 0:
+                if lst[i] <= lst[i-1]:
+                    return False
+            if lst[i] in seen:
+                return False
+            seen.add(lst[i])
+        return True
+
 
 def check(candidate):
 

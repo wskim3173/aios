@@ -10,10 +10,13 @@ def can_arrange(arr):
     can_arrange([1,2,3]) = -1
     """
 
-    for i in range(len(arr) - 1, 0, -1):
-        if arr[i] < arr[i - 1]:
-            return i
-    return -1
+    def can_arrange(arr):
+        index = -1
+        for i in range(1, len(arr)):
+            if arr[i] < arr[i-1]:
+                index = i
+        return index
+
 
 def check(candidate):
 

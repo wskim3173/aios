@@ -15,19 +15,19 @@ def fibfib(n: int):
     24
     """
 
-    if n == 0:
-        return 0
-    elif n == 1:
-        return 0
-    elif n == 2:
-        return 1
-    
-    a, b, c = 0, 0, 1
-    for i in range(3, n + 1):
-        next_value = a + b + c
-        a, b, c = b, c, next_value
-        
-    return c
+    def fibfib(n: int, memo={}):
+        if n in memo:
+            return memo[n]
+        if n == 0:
+            return 0
+        elif n == 1:
+            return 0
+        elif n == 2:
+            return 1
+        else:
+            memo[n] = fibfib(n-1, memo) + fibfib(n-2, memo) + fibfib(n-3, memo)
+            return memo[n]
+
 
 
 

@@ -11,16 +11,16 @@ def strange_sort_list(lst):
     strange_sort_list([]) == []
     '''
 
-    if not lst:
-        return []
+    def strange_sort_list(lst):
+        result = []
+        while lst:
+            result.append(min(lst))
+            lst.remove(min(lst))
+            if lst:
+                result.append(max(lst))
+                lst.remove(max(lst))
+        return result
 
-    sorted_lst = sorted(lst)
-    result = []
-    while sorted_lst:
-        result.append(sorted_lst.pop(0))  # Append the minimum
-        if sorted_lst:
-            result.append(sorted_lst.pop(-1))  # Append the maximum
-    return result
 
 def check(candidate):
 

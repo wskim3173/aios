@@ -8,21 +8,17 @@ def largest_prime_factor(n: int):
     2
     """
 
-    def is_prime(num):
-        if num <= 1:
-            return False
-        for i in range(2, int(num**0.5) + 1):
-            if num % i == 0:
-                return False
-        return True
+    def largest_prime_factor(n: int):
+        largest_factor = 1
+        divisor = 2
+        while n > 1:
+            if n % divisor == 0:
+                largest_factor = divisor
+                n //= divisor
+            else:
+                divisor += 1
+        return largest_factor
 
-    largest_factor = 1
-    for i in range(2, n + 1):
-        while n % i == 0:
-            if is_prime(i):
-                largest_factor = i
-            n //= i
-    return largest_factor
 
 
 

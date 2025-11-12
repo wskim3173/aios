@@ -14,20 +14,18 @@ def prod_signs(arr):
 
     if not arr:
         return None
-    
-    product_sign = 1
-    magnitude_sum = 0
-
+    magnitudes_sum = 0
+    sign_product = 1
     for num in arr:
         if num > 0:
-            magnitude_sum += num
+            magnitudes_sum += num
         elif num < 0:
-            product_sign *= -1
-            magnitude_sum += -num
-        else:
-            product_sign = 0
+            magnitudes_sum += -num
+            sign_product *= -1
+        elif num == 0:
+            sign_product = 0
+    return magnitudes_sum * sign_product
 
-    return product_sign * magnitude_sum
 
 def check(candidate):
 

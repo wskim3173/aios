@@ -13,19 +13,15 @@ def select_words(s, n):
     select_words("Uncle sam", 3) ==> ["Uncle"]
     """
 
-    if not s:
-        return []
-    
-    consonants = "bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ"
-    words = s.split()
-    result = []
-
+    words = s.split() 
+    result = [] 
+    vowels = set('aeiouAEIOU') 
     for word in words:
-        count = sum(1 for char in word if char in consonants)
+        count = sum(1 for char in word if char.isalpha() and char not in vowels) 
         if count == n:
             result.append(word)
-    
     return result
+
 
 def check(candidate):
 

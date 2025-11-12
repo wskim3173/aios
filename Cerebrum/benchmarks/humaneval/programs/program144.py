@@ -12,13 +12,12 @@ def simplify(x, n):
     simplify("7/10", "10/2") = False
     """
 
-    num_x, denom_x = map(int, x.split('/'))
-    num_n, denom_n = map(int, n.split('/'))
-    
-    result_numerator = num_x * num_n
-    result_denominator = denom_x * denom_n
-    
-    return result_numerator % result_denominator == 0
+    numerator_x, denominator_x = map(int, x.split('/'))
+    numerator_n, denominator_n = map(int, n.split('/'))
+    result_num = numerator_x * numerator_n
+    result_den = denominator_x * denominator_n
+    return result_den == 1 or result_num % result_den == 0
+
 
 def check(candidate):
 

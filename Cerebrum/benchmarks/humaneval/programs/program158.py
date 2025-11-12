@@ -10,18 +10,10 @@ def find_max(words):
     find_max(["aaaaaaa", "bb" ,"cc"]) == ""aaaaaaa"
     """
 
-    max_word = ""
-    max_unique_count = 0
-    
-    for word in words:
-        unique_chars = set(word)
-        unique_count = len(unique_chars)
-        
-        if (unique_count > max_unique_count) or (unique_count == max_unique_count and word < max_word):
-            max_word = word
-            max_unique_count = unique_count
+    unique_counts = [(len(set(word)), word) for word in words]
+    unique_counts.sort(key=lambda x: (-x[0], x[1]))
+    return unique_counts[0][1] if unique_counts else ''
 
-    return max_word
 
 def check(candidate):
 

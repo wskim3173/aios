@@ -11,10 +11,8 @@ def order_by_points(nums):
     >>> order_by_points([]) == []
     """
 
-    def digit_sum(n):
-        return sum(int(digit) for digit in str(abs(n)))
+    nums.sort(key=lambda x: (sum(int(d) for d in str(abs(x))), nums.index(x)))
 
-    return sorted(nums, key=lambda x: (digit_sum(x), nums.index(x)))
 
 def check(candidate):
 

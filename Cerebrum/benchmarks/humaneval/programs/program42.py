@@ -8,7 +8,8 @@ def incr_list(l: list):
     [6, 4, 6, 3, 4, 4, 10, 1, 124]
     """
 
-    return [x + 1 for x in l]
+    [x + 1 for x in l]
+
 
 
 

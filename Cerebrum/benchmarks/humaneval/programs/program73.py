@@ -12,11 +12,11 @@ def smallest_change(arr):
     """
 
     changes = 0
-    n = len(arr)
-    for i in range(n // 2):
-        if arr[i] != arr[n - 1 - i]:
+    for i in range(len(arr) // 2):
+        if arr[i] != arr[-(i + 1)]:
             changes += 1
     return changes
+
 
 def check(candidate):
 

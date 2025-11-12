@@ -12,9 +12,9 @@ def is_bored(S):
     1
     """
 
-    sentences = re.split(r'[.!?]', S)
-    boredom_count = sum(1 for sentence in sentences if sentence.strip().startswith("I"))
-    return boredom_count
+    def is_bored(S):
+        return sum(1 for sentence in re.split(r'[.?!]', S) if sentence.strip().startswith('I'))
+
 
 def check(candidate):
 

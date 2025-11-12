@@ -16,21 +16,21 @@ def fib4(n: int):
     14
     """
 
-    if n == 0:
-        return 0
-    elif n == 1:
-        return 0
-    elif n == 2:
-        return 2
-    elif n == 3:
-        return 0
+    def fib4(n: int):
+        if n == 0:
+            return 0
+        elif n == 1:
+            return 0
+        elif n == 2:
+            return 2
+        elif n == 3:
+            return 0
+        fib_values = [0, 0, 2, 0]  # base cases
+        for i in range(4, n + 1):
+            next_value = fib_values[i - 1] + fib_values[i - 2] + fib_values[i - 3] + fib_values[i - 4]
+            fib_values.append(next_value)
+        return fib_values[n]
 
-    fib4_values = [0, 0, 2, 0]
-    for i in range(4, n + 1):
-        next_value = fib4_values[i - 1] + fib4_values[i - 2] + fib4_values[i - 3] + fib4_values[i - 4]
-        fib4_values.append(next_value)
-
-    return fib4_values[n]
 
 
 

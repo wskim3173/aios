@@ -11,15 +11,12 @@ def rounded_avg(n, m):
     rounded_avg(20, 33) => "0b11010"
     """
 
-    if n > m:
-        return -1
-    
-    total_sum = sum(range(n, m + 1))
-    count = m - n + 1
-    average = total_sum / count
-    rounded_average = round(average)
-    
-    return bin(rounded_average)
+    if n > m: return -1
+        total = sum(range(n, m + 1))
+        count = (m - n + 1)
+        avg = round(total / count)
+        return bin(avg)
+
 
 def check(candidate):
 

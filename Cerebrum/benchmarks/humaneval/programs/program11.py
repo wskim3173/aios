@@ -8,15 +8,9 @@ def string_xor(a: str, b: str) -> str:
     '100'
     """
 
-    if len(a) != len(b):
-        raise ValueError("Strings must be of the same length")
-    
-    result = []
-    for bit_a, bit_b in zip(a, b):
-        result_bit = '1' if bit_a != bit_b else '0'
-        result.append(result_bit)
-    
-    return ''.join(result)
+    result = ''.join('1' if a[i] != b[i] else '0' for i in range(len(a)))
+    return result
+
 
 
 

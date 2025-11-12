@@ -15,19 +15,18 @@ def match_parens(lst):
     match_parens([')', ')']) == 'No'
     '''
 
-    def is_balanced(s):
-        balance = 0
-        for char in s:
-            if char == '(':
-                balance += 1
-            elif char == ')':
-                balance -= 1
-            if balance < 0:
+    def balance_check(s):
+        count = 0
+        for ch in s:
+            count += 1 if ch == '(' else -1
+            if count < 0:
                 return False
-        return balance == 0
+        return count == 0
+    
+    if balance_check(lst[0] + lst[1]) or balance_check(lst[1] + lst[0]):
+        return 'Yes'
+    return 'No'
 
-    s1, s2 = lst
-    return 'Yes' if is_balanced(s1 + s2) or is_balanced(s2 + s1) else 'No'
 
 def check(candidate):
 

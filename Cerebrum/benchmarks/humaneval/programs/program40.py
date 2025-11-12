@@ -18,15 +18,8 @@ def triples_sum_to_zero(l: list):
     False
     """
 
-    n = len(l)
-    for i in range(n):
-        seen = set()
-        for j in range(i + 1, n):
-            complement = - (l[i] + l[j])
-            if complement in seen:
-                return True
-            seen.add(l[j])
-    return False
+
+
 
 
 

@@ -11,13 +11,13 @@ def next_smallest(lst):
     next_smallest([1, 1]) == None
     """
 
-    if len(lst) < 2:
-        return None
-    unique_elements = list(set(lst))
-    if len(unique_elements) < 2:
-        return None
-    unique_elements.sort()
-    return unique_elements[1]
+    def next_smallest(lst):
+        unique_lst = list(set(lst))
+        if len(unique_lst) < 2:
+            return None
+        unique_lst.sort()
+        return unique_lst[1]
+
 
 def check(candidate):
 

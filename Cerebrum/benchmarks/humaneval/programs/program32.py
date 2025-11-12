@@ -22,21 +22,29 @@ def find_zero(xs: list):
     1.0
     """
 
-    # Using Newton's method to find a root
-    x = 0.0  # Initial guess
-    tolerance = 1e-7  # Tolerance for convergence
-    max_iterations = 1000  # Prevent infinite loops
-    for _ in range(max_iterations):
-        fx = poly(xs, x)
-        # Calculate the derivative using numerical approximation
-        dfx = (poly(xs, x + tolerance) - fx) / tolerance
-        if dfx == 0:  # Prevent division by zero
-            break
-        x_new = x - fx / dfx
-        if abs(x_new - x) < tolerance:  # Convergence check
-            return x_new
-        x = x_new
-    return x  # Return the last approximation if not converged
+    def find_zero(xs: list):
+        def poly_derivative(xs: list):
+            return [coeff * i for i, coeff in enumerate(xs[1:], 1)]
+    
+        x0 = 0.0  # Initial guess
+        tolerance = 1e-7
+        max_iterations = 100
+    
+        for _ in range(max_iterations):
+            f_value = poly(xs, x0)
+            f_derivative = poly(poly_derivative(xs), x0)
+    
+            if f_derivative == 0:
+                raise ValueError('Derivative is zero, no solution found.')
+    
+            x1 = x0 - f_value / f_derivative
+    
+            if abs(x1 - x0) < tolerance:
+                return x1
+    
+            x0 = x1
+        raise ValueError('Exceeded maximum iterations, no root found.')
+
 
 
 

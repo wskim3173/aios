@@ -10,11 +10,12 @@ def max_element(l: list):
 
     if not l:
         return None
-    max_val = l[0]
+    max_elem = l[0]
     for num in l:
-        if num > max_val:
-            max_val = num
-    return max_val
+        if num > max_elem:
+            max_elem = num
+    return max_elem
+
 
 
 

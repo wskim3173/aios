@@ -12,17 +12,16 @@ def compare_one(a, b):
     compare_one("1", 1) ➞ None
     """
 
-    def parse_value(value):
-        if isinstance(value, str):
-            value = value.replace(',', '.')
-        return float(value) if isinstance(value, (int, float, str)) and value.replace('.', '', 1).replace(',', '', 1).isdigit() else value
-
-    a_parsed = parse_value(a)
-    b_parsed = parse_value(b)
-
-    if a_parsed == b_parsed:
+    if isinstance(a, str):
+        a = a.replace(',', '.')
+        a = float(a)
+    if isinstance(b, str):
+        b = b.replace(',', '.')
+        b = float(b)
+    if a == b:
         return None
-    return a if a_parsed > b_parsed else b
+    return a if a > b else b
+
 
 def check(candidate):
 

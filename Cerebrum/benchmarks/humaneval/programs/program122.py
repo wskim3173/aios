@@ -14,11 +14,8 @@ def add_elements(arr, k):
         2. 1 <= k <= len(arr)
     """
 
-    total = 0
-    for i in range(min(k, len(arr))):
-        if -100 < arr[i] < 100:
-            total += arr[i]
-    return total
+    return sum(x for x in arr[:k] if -10 < x < 100)
+
 
 def check(candidate):
 
