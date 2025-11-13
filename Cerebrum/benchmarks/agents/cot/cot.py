@@ -9,8 +9,8 @@ class CoT:
     def __init__(self, on_aios: bool = True):
         self.agent_name = "llm"
         self.on_aios = on_aios
-        self.model = "qwen3:1.7b"
-        self.backend = "ollama"
+        self.model = "gpt-4o-mini"   #gpt-4o-mini #qwen3:1.7b
+        self.backend = "openai"     #openai #ollama
         self.llms = [{"name": self.model, "backend": self.backend}]
 
     def run_swebench(self, input_str: str):

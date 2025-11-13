@@ -1,213 +1,240 @@
 from typing import Dict, Any, List
 import time
+import re
 import threading
 
-from cerebrum.llm.apis import llm_chat_with_json_output
-from cerebrum.utils import _parse_json_output
+from cerebrum.llm.apis import llm_chat   # ✅ JSON이 아니라 일반 채팅 API 사용
 from cerebrum.config.config_manager import config
-
 from litellm import completion
 
 aios_kernel_url = config.get_kernel_url()
 
 class ReActAgent:
     """
-    ReActAgent (AIOS-ON version)
-    - Uses llm_chat_with_json_output (AIOS backend)
-    - No external tools, pure reasoning loop
+    ReActAgent (plain-text version)
+    - No JSON schema
+    - No external tools
+    - Simple string template + regex parsing
     - Returns properly indented function body for HumanEval
     """
 
     def __init__(self, on_aios: bool = True, max_steps: int = 4):
         self.agent_name = "react"
-        self.on_aios = on_aios  # 기본: True
+        self.on_aios = on_aios
         self.max_steps = max_steps
-        self.model = "qwen3:1.7b"
-        self.backend = "ollama"
+        self.model = "qwen3:1.7b"   #gpt-4o-mini #qwen3:1.7b
+        self.backend = "ollama"     #openai #ollama
         self.history: List[Dict[str, Any]] = []
-        #self.llms = [{"name": "gpt-4o-mini", "backend": "openai"}]
         self.llms = [{"name": self.model, "backend": self.backend}]
         self.t = threading.current_thread()
 
     # --- Core Loop ---
     def run_humaneval(self, task_input: str) -> str:
-        """
-        ReAct 루프: Reason → Revise → Judge (AIOS 기반 JSON 루프)
-        """
         self.history.clear()
 
-        system_prompt = f"""You are a senior Python assistant solving a code-completion task.
+        if self.model == "qwen3:1.7b":
+           system_prompt = f"""
+You are a senior Python assistant solving a code-completion task.
 Follow a compact ReAct loop (Reason → Revise → Judge).
-No external tools. You must end with a clean function BODY only (no def header).
+No external tools.
+
+# CONTEXT
+You are completing ONLY the inside of a Python function.
+The function header (def ...) already exists.
+You must write only the function BODY.
+
+# OUTPUT CONTRACT (STRICT)
+Output EXACTLY in the following structure:
+
+Thought: <one short sentence about what to fix/check>
+Candidate:
+<FINAL_ANSWER>
+    [your Python code here, each line indented with EXACTLY 4 spaces]
+</FINAL_ANSWER>
+Finish: <true|false>
+
+# RULES
+1. Do NOT include 'def', parameters, or docstring.
+2. Each code line MUST begin with **exactly 4 spaces**.
+3. The first non-empty line must be "<FINAL_ANSWER>".
+4. The last non-empty line must be "</FINAL_ANSWER>".
+5. No markdown fences, no extra explanations.
+6. If you output code without indentation, it is INVALID.
+
+# EXAMPLE
+Thought: Need to sort the list and compare adjacent elements.
+Candidate:
+<FINAL_ANSWER>
+    numbers.sort()
+    for i in range(len(numbers)-1):
+        if numbers[i+1] - numbers[i] < threshold:
+            return True
+    return False
+</FINAL_ANSWER>
+Finish: true
+
+## Task
+{task_input}
+"""
+        else:
+            system_prompt = f"""You are a senior Python assistant solving a code-completion task.
+Follow a compact ReAct loop (Reason → Revise → Judge).
+No external tools. You must end with a clean FUNCTION BODY only (no def header).
 
 ## Task
 {task_input}
 
-## Rules
-- Think concisely about pitfalls (edge cases, off-by-one, etc.)
-- Produce or refine a candidate implementation (function BODY only)
-- Never include explanations in the final body
-- When confident, set finish=true and stop.
+## Output format (STRICT - plain text, no markdown fences):
+Thought: <one short sentence about what to fix/check>
 
-## JSON response schema (STRICT)
-{{
-  "observation": "what the previous draft did well/poorly (short)",
-  "reasoning":   "what to change or verify (short)",
-  "finish":      true or false,
-  "candidate":   "FUNCTION BODY ONLY (no def line, no code fences)"
-}}
+Candidate:
+The Candidate should strictly follow the following format and requirements:
+
+    Format:
+    Print ONLY the following wrapper with your code body inside.
+    The FIRST non-empty line MUST be exactly "<FINAL_ANSWER>".
+    The LAST non-empty line MUST be exactly "</FINAL_ANSWER>".
+    No markdown fences. No comments. No explanations.
+
+    Example:
+    <FINAL_ANSWER>
+        result = x * 2
+        return result
+    </FINAL_ANSWER>
+
+    Requirements: 
+    1. YOUR FINAL ANSWER must be a piece of code that can be directly filled into the given code at the <CURRENT_CURSOR_POSITION> marker.
+    2. Only include the code you're adding, don't include the original function definition or comments.
+    3. Do not use extra code quotes like ```python``` to wrap the code.
+    4. Make sure the syntax of the code is correct, especially pay attention to proper indentation.
+    5. Maintain the same indentation level as the surrounding code.
+    6. If you're completing a function body, ensure all code is properly indented inside the function.
+    7. Check that all return statements, loops, and conditional blocks have correct indentation.
+    8. Ensure your code aligns with the original code style and indentation pattern.
+
+Finish: <true|false>
+
+Rules:
+- Think briefly about pitfalls (edge cases, off-by-one, etc.)
+- If confident the candidate is final, set Finish: true
+- Otherwise, set Finish: false and wait for the next round
+- Output NOTHING except the three fields above
 """
 
         messages = [{"role": "system", "content": system_prompt}]
         final_code = ""
 
-        # --- JSON Schema (OpenAI-compatible) ---
-        response_format = {
-            "type": "json_schema",
-            "json_schema": {
-                "name": "react_reason_only",
-                "schema": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "properties": {
-                        "observation": {"type": "string"},
-                        "reasoning":   {"type": "string"},
-                        "finish":      {"type": "boolean"},
-                        "candidate":   {"type": "string"},
-                    },
-                    "required": ["observation", "reasoning", "finish", "candidate"]
-                },
-                "strict": True
-            }
-        }
-
         for step in range(self.max_steps):
             step_prompt = f"""History (latest first, up to 3):
-{self.history[-3:]}
-Return STRICT JSON with keys: observation, reasoning, finish, candidate."""
+{self._format_history_for_prompt(self.history[-3:])}
+
+Now produce exactly:
+Thought: ...
+Candidate:
+...
+Finish: <true|false>"""
             messages.append({"role": "user", "content": step_prompt})
 
-            # --- Branch on AIOS ---
+            # --- Branch on AIOS / non-AIOS ---
             if self.on_aios:
-                # AIOS backend enforces JSON schema
-                resp = llm_chat_with_json_output(
+                resp = llm_chat(
                     agent_name=self.agent_name,
                     messages=messages,
                     base_url=aios_kernel_url,
                     llms=self.llms,
-                    response_format=response_format
                 )
                 raw = resp["response"]["response_message"]
-
             else:
-                # Non-AIOS: call litellm and extract plain text content
-                # We still *ask* for JSON in the prompt and parse it defensively.
                 non_aios_resp = completion(
                     model=self.model,
                     messages=messages,
-                    temperature=1.0,
-                    response_format=response_format
+                    temperature=0.2,         # 살짝 낮추면 형식 준수 ↑
+                    # ollama/vllm 계열은 JSON 강제 대신 plain text가 더 안정적
+                    # 필요하면: extra_body={"format": "json"} 제거(여긴 문자열 기반)
                 )
-
                 if isinstance(non_aios_resp, str):
                     raw = non_aios_resp
                 else:
                     raw = (
                         non_aios_resp.get("choices", [{}])[0]
-                                    .get("message", {})
-                                    .get("content")
+                                     .get("message", {})
+                                     .get("content")
                     )
                     if raw is None:
                         raw = non_aios_resp.get("content", "")
                 raw = raw or ""
 
-            step_obj = _parse_json_output(raw)
-
-            obs = step_obj.get("observation").strip()
-            rsn = step_obj.get("reasoning").strip()
-            fin = step_obj.get("finish", False)
-            cand = step_obj.get("candidate").strip()
+            # --- Plain ReAct parsing ---
+            step_obj = self._parse_plain_react(raw)
+            thought = step_obj["thought"]
+            cand    = step_obj["candidate"]
+            finish  = step_obj["finish"]
 
             self.history.append({
                 "round": step,
-                "observation": obs,
-                "reasoning": rsn,
-                "finish": fin,
-                "candidate_len": len(cand)
+                "thought": thought,
+                "candidate_len": len(cand),
+                "finish": finish,
             })
 
-            final_code = self._strip_code_fences(cand).strip()
+            final_code = cand
 
-            if fin and final_code:
+            if finish and final_code:
                 break
 
             time.sleep(0.1)
-        
-        final_code = self._normalize_body_indent(final_code)
-        return f"<FINAL_ANSWER>\n{final_code}\n</FINAL_ANSWER>"
 
-    # --- Helper methods ---
+        return final_code
+
+    # --- Helper: format history into short lines ---
     @staticmethod
-    def _strip_code_fences(text: str) -> str:
+    def _format_history_for_prompt(hist: List[Dict[str, Any]]) -> str:
+        if not hist:
+            return "[]"
+        lines = []
+        for h in reversed(hist):
+            lines.append(f"- Round {h['round']}: thought_len={len(h.get('thought',''))}, candidate_len={h.get('candidate_len',0)}, finish={h.get('finish',False)}")
+        return "\n".join(lines)
+
+    # --- Helper: plain-text ReAct parser ---
+    @staticmethod
+    def _parse_plain_react(text: str) -> Dict[str, Any]:
+        """
+        Expecting exactly:
+        Thought: ...
+        Candidate:
+        ...
+        Finish: true/false
+        """
+        # normalize line endings
+        t = text.replace("\r\n", "\n").replace("\r", "\n")
+
+        # 1) Thought
+        m_thought = re.search(r"(?im)^\s*Thought:\s*(.*)$", t)
+        thought = (m_thought.group(1).strip() if m_thought else "")
+
+        # 2) Candidate block: from 'Candidate:' line until the next 'Finish:' line (or end)
+        m_cand_start = re.search(r"(?im)^\s*Candidate:\s*$", t)
+        candidate = ""
+        if m_cand_start:
+            start = m_cand_start.end()
+            m_finish = re.search(r"(?im)^\s*Finish:\s*(true|false)\s*$", t)
+            if m_finish:
+                end = m_finish.start()
+                candidate = t[start:end].strip("\n")
+            else:
+                candidate = t[start:].strip("\n")
+
+        # 3) Finish
+        m_finish = re.search(r"(?im)^\s*Finish:\s*(true|false)\s*$", t)
+        finish = False
+        if m_finish:
+            finish = (m_finish.group(1).lower() == "true")
+
+        return {"thought": thought, "candidate": candidate, "finish": finish}
         t = text.strip()
         if t.startswith("```"):
             t = t.strip("`")
             if t.startswith("python"):
                 t = t[len("python"):].lstrip()
         return t
-
-    @staticmethod
-    def _normalize_body_indent(code: str, spaces: int = 4) -> str:
-        """
-        HumanEval용 함수 본문 들여쓰기 정규화:
-        - 앞뒤 빈 줄 제거
-        - 공통 최소 들여쓰기(dedent) 제거
-        - 정확히 `spaces`칸 들여쓰기 적용
-        - 탭을 스페이스로 치환
-        """
-        if code is None:
-            return "\n"
-
-        # 줄 단위 분리
-        lines = code.splitlines()
-
-        # 앞/뒤 공백 줄 제거
-        while lines and lines[0].strip() == "":
-            lines.pop(0)
-        while lines and lines[-1].strip() == "":
-            lines.pop()
-
-        if not lines:
-            return "\n"
-
-        # 탭을 스페이스로 치환
-        lines = [ln.replace("\t", "    ") for ln in lines]
-
-        # 공통 최소 선행 공백 폭 계산
-        def leading_spaces(s: str) -> int:
-            return len(s) - len(s.lstrip(" "))
-
-        min_lead = None
-        for ln in lines:
-            if ln.strip() == "":
-                continue
-            lead = leading_spaces(ln)
-            min_lead = lead if min_lead is None else min(min_lead, lead)
-
-        if min_lead is None:
-            min_lead = 0
-
-        # dedent 적용
-        dedented = []
-        for ln in lines:
-            if ln.strip() == "":
-                dedented.append("")  # 빈 줄은 그대로 유지
-            else:
-                # 선행 공백이 min_lead보다 적게 들어왔을 수 있으니 방어적으로 처리
-                cur_lead = leading_spaces(ln)
-                cut = min(cur_lead, min_lead)
-                dedented.append(ln[cut:])
-
-        # 정확히 `spaces`칸 들여쓰기 재적용 + \n 유지
-        prefix = " " * spaces
-        return "".join(prefix + ln + "\n" for ln in dedented)
