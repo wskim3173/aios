@@ -211,3 +211,9 @@ aios/config/config.yaml
 
 # ignore cerebrum
 #Cerebrum/*
+
+# ignore programs for humaneval
+Cerebrum/benchmarks/humaneval/programs/*
+
+# ignore chroma.sqlite3
+root/chroma.sqlite3

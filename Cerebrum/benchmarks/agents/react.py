@@ -22,8 +22,8 @@ class ReActAgent:
         self.agent_name = "react"
         self.on_aios = on_aios
         self.max_steps = max_steps
-        self.model = "qwen3:1.7b"   #gpt-4o-mini #qwen3:1.7b
-        self.backend = "ollama"     #openai #ollama
+        self.model = "meta-llama/Llama-3.1-8B-Instruct"   #gpt-4o-mini #qwen3:1.7b #meta-llama/Llama-3.1-8B-Instruct
+        self.backend = "vllm"     #openai #ollama #vllm
         self.history: List[Dict[str, Any]] = []
         self.llms = [{"name": self.model, "backend": self.backend}]
         self.t = threading.current_thread()
@@ -32,7 +32,7 @@ class ReActAgent:
     def run_humaneval(self, task_input: str) -> str:
         self.history.clear()
 
-        if self.model == "qwen3:1.7b":
+        if self.model == "meta-llama/Llama-3.1-8B-Instruct":
            system_prompt = f"""
 You are a senior Python assistant solving a code-completion task.
 Follow a compact ReAct loop (Reason → Revise → Judge).
@@ -145,13 +145,20 @@ Finish: <true|false>"""
                 )
                 raw = resp["response"]["response_message"]
             else:
-                non_aios_resp = completion(
-                    model=self.model,
-                    messages=messages,
-                    temperature=0.2,         # 살짝 낮추면 형식 준수 ↑
-                    # ollama/vllm 계열은 JSON 강제 대신 plain text가 더 안정적
-                    # 필요하면: extra_body={"format": "json"} 제거(여긴 문자열 기반)
-                )
+                if self.model == "meta-llama/Llama-3.1-8B-Instruct": 
+                    non_aios_resp = completion(
+                        model="hosted_vllm/"+self.model,
+                        messages=messages,
+                        base_url="http://127.0.0.1:8091/v1",
+                        temperature=0.2,
+                    )
+                else:
+                    non_aios_resp = completion(
+                        model=self.model,
+                        messages=messages,
+                        temperature=0.2,
+                    )
+
                 if isinstance(non_aios_resp, str):
                     raw = non_aios_resp
                 else:
