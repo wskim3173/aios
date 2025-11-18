@@ -30,12 +30,12 @@ class ReActAgent:
     def __init__(self, on_aios: bool = True):
         self.agent_name = "react"
         self.on_aios = on_aios
-        self.max_steps = 20
-        self.history_window = 10
+        self.max_steps = 20 #20
+        self.history_window = 10 #10
         self.history = []
         self.workers = {
             "browser_use_agent": BrowserUseAgent(True),
-            # "arxiv_search": AutoTool.from_preloaded("example/arxiv")
+            #"arxiv_search": AutoTool.from_preloaded("example/arxiv")
         }
     
     def run(self, task_input: str):
