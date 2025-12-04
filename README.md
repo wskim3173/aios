@@ -21,3 +21,6 @@
   --on_aios \
   --agent_num 64 \
   --max_num 164
+
+5. 채점
+   evaluate_functional_correctness humaneval/output_multi.jsonl
