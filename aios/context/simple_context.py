@@ -393,7 +393,7 @@ class SimpleContextManager(BaseContextManager):
         initial_content = messages[-1]["content"] if messages and "content" in messages[-1] else ""
         
         # Process the streaming response
-        completed_response, finished = self.process_streaming_completion_response(
+        completed_response, finished = self.process_completion_streaming_response(
             response=stream_response,
             initial_content=initial_content,
             time_limit=time_limit

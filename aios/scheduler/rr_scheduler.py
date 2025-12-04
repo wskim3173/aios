@@ -175,12 +175,31 @@ class RRScheduler(BaseScheduler):
             # }
             ```
         """
+        '''
         while self.active:
             try:
                 llm_syscall = self.get_llm_syscall()
                 self._execute_batch_syscalls(llm_syscall, self.llm.execute_llm_syscalls, "LLM")
             except Empty:
                 pass
+        '''
+        while self.active:
+            time.sleep(0.1)
+
+            batch = []
+            while True:
+                try:
+                    llm_syscall = self.get_llm_syscall()
+                    # Add logging here: print(f"Retrieved syscall: {llm_syscall.pid}, Queue size now: {self.llm_queue.qsize()}")
+                    #print(f"Retrieved syscall: {llm_syscall.pid}, Query message: {llm_syscall.query.messages}")
+                    batch.append(llm_syscall)
+                except Empty:
+                    # This is the expected way to finish collecting the batch
+                    # print(f"Queue empty, finishing batch collection with {len(batch)} items.")
+                    break
+
+            if batch:
+                self._execute_batch_syscalls(batch, self.llm.execute_llm_syscalls, "LLM")
 
     def process_memory_requests(self) -> None:
         """

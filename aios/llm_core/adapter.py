@@ -726,7 +726,7 @@ class LLMAdapter:
                     response_format=response_format,
                     temperature=temperature,
                     max_tokens=max_tokens,
-                    api_base=api_base # Pass api_base to context manager if needed
+                    #api_base=api_base # Pass api_base to context manager if needed
                 )
                 # The context manager should return the raw response (str, dict, or tool call list)
                 # It might raise exceptions if interrupted or if the underlying call fails.
