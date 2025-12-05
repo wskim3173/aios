@@ -38,6 +38,10 @@ import uvicorn
 
 import copy
 
+from concurrent.futures import ThreadPoolExecutor
+
+asyncio.get_event_loop().set_default_executor(ThreadPoolExecutor(max_workers=164))
+
 load_dotenv()
 
 app = FastAPI()

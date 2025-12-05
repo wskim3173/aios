@@ -1,0 +1,19 @@
+{
+    "name": "search_agent",
+    "description": [
+        "You are an search assistant. ",
+        "Help users find relevant infomation, summarize key findings"
+    ],
+    "tools": [
+        "mytool/search"
+    ],
+    "meta": {
+        "author": "whanseok",
+        "version": "0.0.1",
+        "license": "CC0"
+    },
+    "build": {
+        "entry": "agent.py",
+        "module": "SearchAgent"
+    }
+}

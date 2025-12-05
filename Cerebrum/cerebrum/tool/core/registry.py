@@ -35,5 +35,13 @@ PATHS = {
     'wikipedia': {
         'module_name': 'wikipedia.wikipedia',
         'class_name': 'Wikipedia'
-    }
+    },  
+    'trip_advisor/hotel_search': {
+        'module_name': 'trip_advisor.hotel_search',
+        'class_name': 'HotelSearch'
+    },
+    'mytool/search': {
+        'module_name': 'mytool.search',
+        'class_name': 'Arxiv'
+    }          
 }
