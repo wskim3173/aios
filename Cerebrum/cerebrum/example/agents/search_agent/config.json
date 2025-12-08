@@ -5,7 +5,7 @@
         "Help users find relevant infomation, summarize key findings"
     ],
     "tools": [
-        "mytool/search"
+        "example/wikipedia"
     ],
     "meta": {
         "author": "whanseok",

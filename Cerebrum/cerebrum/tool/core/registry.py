@@ -32,8 +32,8 @@ PATHS = {
         'module_name': 'wolfram.wolfram_alpha',
         'class_name': 'WolframAlpha'
     },
-    'wikipedia': {
-        'module_name': 'wikipedia.wikipedia',
+    'example/wikipedia': {
+        'module_name': 'example.wikipedia',
         'class_name': 'Wikipedia'
     },  
     'trip_advisor/hotel_search': {

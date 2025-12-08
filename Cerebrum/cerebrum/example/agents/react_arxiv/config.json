@@ -1,0 +1,17 @@
+{
+    "name": "react",
+    "description": [
+        "You are a react agent. You can use the browser to search for information and execute code. "
+    ],
+    "tools": [
+    ],
+    "meta": {
+        "author": "example",
+        "version": "0.0.1",
+        "license": "CC0"
+    },
+    "build": {
+        "entry": "agent.py",
+        "module": "ReActAgent"
+    }
+}

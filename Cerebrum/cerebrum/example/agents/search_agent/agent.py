@@ -134,7 +134,7 @@ class SearchAgent:
             {
                 "action_type": "call_tool",
                 "action": "Search for relevant information",
-                "tool_use": ["mytool/search"],
+                "tool_use": ["example/wikipedia"],
             },
             {
                 "action_type": "chat",
