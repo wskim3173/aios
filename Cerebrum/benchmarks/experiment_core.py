@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from tqdm import tqdm
 
 #from .agents.react import ReActAgent
-from .agents.react_code import ReActAgent
+from .agents.react_code.agent import ReActAgent
 from .agents.cot.cot import CoT
 
 AGENT_TYPE_MAPPING_AIOS = {
