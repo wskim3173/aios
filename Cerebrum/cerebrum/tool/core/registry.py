@@ -43,5 +43,9 @@ PATHS = {
     'mytool/search': {
         'module_name': 'mytool.search',
         'class_name': 'Arxiv'
-    }          
+    },
+    'code/code_test_runner': {
+        'module_name': 'code.code_test_runner',
+        'class_name': 'CodeTestRunner'
+    }               
 }
