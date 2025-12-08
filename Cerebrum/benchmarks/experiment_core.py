@@ -3,12 +3,13 @@ from typing import Any, Callable
 from pydantic import BaseModel
 from tqdm import tqdm
 
-from .agents.react import ReActAgent
+#from .agents.react import ReActAgent
+from .agents.react_code import ReActAgent
 from .agents.cot.cot import CoT
 
 AGENT_TYPE_MAPPING_AIOS = {
     "swe:react": ReActAgent,
-    "humaneval:react": ReActAgent,
+    "humaneval:react_code": ReActAgent,
     "gaia:react": ReActAgent,
     "humaneval:cot": CoT,
 }

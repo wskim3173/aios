@@ -21,8 +21,8 @@ class CodeTestRunner(BaseTool):
     def __init__(self):
         super().__init__()
 
-        print("\n" + "-" * 40 + "\n")
-        print("CodeTestRunner tool initialized")
+        #print("\n" + "-" * 40 + "\n")
+        #print("CodeTestRunner tool initialized")
 
         # Default timeout in seconds for test execution
         self.default_timeout: float = 5.0
@@ -121,7 +121,7 @@ class CodeTestRunner(BaseTool):
         tool_call_format = {
             "type": "function",
             "function": {
-                "name": "code/test_runner",
+                "name": "code/code_test_runner",
                 "description": (
                     "Run Python code against test code in an isolated process "
                     "and return the test results. Useful for checking if "

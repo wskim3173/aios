@@ -35,7 +35,7 @@ def build_check_program(prompt: str, completion: str, test: str, entry_point: st
 # ===== core =====
 def process_one_with_agent(agent, data: Dict[str, Any], programs_dir: str) -> Dict[str, Any]:
     # agent.run_humaneval은 기존 구현과 동일한 인터페이스를 기대
-    result = agent.run_humaneval(data["prompt"])
+    result = agent.run(data["prompt"])
     result = parse_result(result)
 
     check_program = build_check_program(

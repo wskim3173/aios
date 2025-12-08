@@ -30,7 +30,7 @@ class AutoTool:
     TOOL_MANAGER = ToolManager(hub_url)
 
     @classmethod
-    def from_preloaded(cls, tool_name: str, local: bool = False):
+    def from_preloaded(cls, tool_name: str, local: bool = True):
         # n_slash = tool_name.count('/')
         # breakpoint()
         # if n_slash == 1: # load from author/name

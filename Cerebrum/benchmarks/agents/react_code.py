@@ -42,56 +42,45 @@ class ReActAgent:
     # -----------------------------------------------------------------------------------
 
     def run(self, task_input: str) -> str:
+        
+        system_prompt = """
+    You are a senior Python assistant that fixes a single function using a ReAct loop
+    and the tool \"code_test_runner\".
 
-        #breakpoint()
+    - Input: a task that contains a Python function (possibly buggy) and its tests.
+    - You CANNOT run code yourself; only the tool runs tests.
+    - The environment gives you a short <history> with previous code, tool outputs,
+    and your own reasoning.
 
-        system_prompt = f"""
-    You are a senior Python assistant solving a code-completion task using a ReAct loop with a testing tool.
+    At each step you MUST do:
 
-    Context:
-    - You will receive a task that contains a Python function (possibly buggy or incomplete) and a set of tests.
-    - You cannot execute code directly; tests are run only via the worker "code_test_runner".
-    - The environment will show you a short <history> with previous code versions, tool outputs (test results), and your reasoning.
+    1) observation
+    - Read the latest test result in <history>.
+    - Briefly state what happened (which tests failed, error messages, etc.).
 
-    At every step you must follow this loop:
+    2) reasoning
+    - Explain what is wrong in the current implementation.
+    - Decide how to fix it (what logic to change, which edge cases to handle).
 
-    1) Observation
-    - Read the latest tool output in the history (test results, errors, tracebacks).
-    - Briefly summarize what happened:
-    - Did the tests run?
-    - Which tests failed, or what error occurred?
-    - What inputs or edge cases triggered the failure?
+    3) action
+    - Write a full revised implementation of the function (def + body).
+    - If you want to run tests on this version:
+        * set worker_name = "code_test_runner"
+        * set worker_params = {
+            "code":  "<NEW full implementation>",
+            "tests": "<original tests>",
+            "timeout": 5.0
+            }
+    - If you are sure that ALL tests have already passed in the latest tool run:
+        * set worker_name = null
+        * set worker_params = null
 
-    2) Thought
-    - Explain what is wrong with the current implementation based on the observation.
-    - Decide how to fix it:
-    - Which logic or lines must change?
-    - Which edge cases must be handled?
-    - How to keep the solution simple and correct?
-
-    3) Action
-    - Write a full revised implementation of the function (complete def + body).
-    - Do NOT include the tests inside this code.
-    - If you still need to check the code, you must call the worker "code_test_runner":
-    - Set "worker_name" to "code_test_runner".
-    - Set "worker_params" to an object that contains:
-        - "code": the NEW full implementation as a single Python string.
-        - "tests": the original test code as a single Python string.
-        - "timeout": 5.0
-
-    Stopping rule:
-    - As long as the latest tool output shows any failing tests or runtime errors, you must continue refining the code and call "code_test_runner" again.
-    - Only after you have seen a tool output where all tests pass successfully, you are allowed to stop.
-    - When you decide to stop:
-    - Set "worker_name" to null.
-    - Set "worker_params" to null.
-
-    Additional rules:
-    - Never invent or guess test results; rely only on real tool outputs shown in the history.
-    - Do not resend exactly the same code that already failed; always adjust the implementation to address the observed issue.
-    - Keep "observation" and "reasoning" concise but specific.
-    - Do not put code into "observation" or "reasoning"; put the full implementation only in "worker_params"."code".
+    Rules:
+    - Do NOT invent test results; rely only on tool outputs in <history>.
+    - Do NOT resend exactly the same code after a failing run; always refine it.
+    - Put only the function implementation into worker_params["code"]; never put tests there.
     """
+
         messages = [{"role": "system", "content": system_prompt}]
 
         final_answer = ""
@@ -104,26 +93,30 @@ class ReActAgent:
         while rounds < self.max_steps:
             # Provide recent trajectory
             step_instructions = f"""
-        Produce the next ReAct step as a single JSON object with the fields:
+        Return the next ReAct step as a single JSON object:
 
         {{
-            "observation": "...",   // what you learned from the latest tool output in history
-            "reasoning":   "...",   // how you plan to change the implementation
-            "worker_name": "code_test_runner" or null,
-            "worker_params": {{
-                "code": "<full updated implementation>",
-                "tests": "<original tests>",
-                "timeout": 5.0
-            }} or null
+        "observation": "...",
+        "reasoning": "...",
+        "worker_name": "code_test_runner" or null,
+        "worker_params": {{
+            "code": "<full updated implementation>",
+            "tests": "<original tests>",
+            "timeout": 5.0
+        }} or null
         }}
 
-        Guidelines:
-        - Base "observation" and "reasoning" on the most recent information in <history>.
-        - If you want to run tests on a new implementation, set "worker_name" to "code_test_runner"
-        and provide "worker_params" with the updated full code and the original tests.
-        - If, according to the system instructions, you judge that debugging is finished
-        (all tests have already passed), set both "worker_name" and "worker_params" to null.
-        - Put ONLY the full function implementation into "worker_params.code" (no tests).
+        - "observation": what you learned from the latest test result in history.
+        - "reasoning": how you will change the implementation and why.
+        - To run tests on a new implementation:
+            * worker_name = "code_test_runner"
+            * worker_params = the updated full code and the original tests.
+        - If, following the system instructions, you judge that all tests have already
+        passed and no more changes are needed:
+            * worker_name = null
+            * worker_params = null.
+
+        Use the following history as context:
 
         <history>
         {self.history[-self.history_window:]}
@@ -231,8 +224,6 @@ class ReActAgent:
 
             rounds += 1
 
-        #breakpoint()
-
         return final_answer
 
     # -----------------------------------------------------------------------------------
@@ -285,8 +276,6 @@ class ReActAgent:
             messages=messages,
             llms=self.llms
         )
-
-        breakpoint()
 
         return resp["response"]["response_message"]
 

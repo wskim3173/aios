@@ -29,7 +29,7 @@ class ReActAgent:
         self.t = threading.current_thread()
 
     # --- Core Loop ---
-    def run_humaneval(self, task_input: str) -> str:
+    def run(self, task_input: str) -> str:
         self.history.clear()
 
         if self.model == "meta-llama/Llama-3.1-8B-Instruct":
