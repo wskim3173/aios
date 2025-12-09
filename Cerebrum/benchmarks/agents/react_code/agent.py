@@ -39,20 +39,20 @@ class ReActAgent:
     - 반환: 마지막 Candidate (즉 <FINAL_ANSWER> ... </FINAL_ANSWER> 블록)
     """
 
-    def __init__(self, on_aios: bool = True, max_steps: int = 4):
+    def __init__(self, on_aios: bool = True, max_steps: int = 10):
         self.agent_name = "react"
         self.on_aios = on_aios
         self.max_steps = max_steps
 
-        self.model = "meta-llama/Llama-3.1-8B-Instruct"#"meta-llama/Llama-3.1-8B-Instruct"#"gpt-4o-mini"#   # 예: gpt-4o-mini / qwen3 등
-        self.backend = "vllm"#"vllm"#"openai"                             # openai / ollama / vllm
+        self.model = "gpt-4o-mini"#"meta-llama/Llama-3.1-8B-Instruct"#"gpt-4o-mini"#   # 예: gpt-4o-mini / qwen3 등
+        self.backend = "openai"#"vllm"#"openai"                             # openai / ollama / vllm
         self.llms = [{"name": self.model, "backend": self.backend}]
 
         self.history: List[Dict[str, Any]] = []
 
         # --- CodeTestRunner tool 준비 ---
-        tool = AutoTool.from_preloaded("code/code_test_runner")
-        self.tools = [tool.get_tool_call_format()]
+        self.tool = AutoTool.from_preloaded("code/code_test_runner")
+        self.tools = [self.tool.get_tool_call_format()]
 
     # ----------------------------------------------------------------------
     #                           MAIN RUN LOOP
@@ -162,6 +162,8 @@ Finish: <yes|no>"""
 
             final_candidate = candidate  # 항상 최신 Candidate를 최종 후보로 유지
 
+            #breakpoint()
+
             # --- Code + Tests 구성해서 tool 실행 ---
             full_code = self._build_full_code(task_input, func_header, body)
             worker_params = {
@@ -190,7 +192,7 @@ Finish: <yes|no>"""
             # --- 종료 조건 ---
             # Tool이 success AND LLM이 Finish: yes 라고 한 경우에만 종료
             #if tool_status == "success" and finish_flag and final_candidate:
-            if tool_status == "success":
+            if tool_status == "success" and finish_flag == True:
                 break
 
         return final_candidate
@@ -242,34 +244,67 @@ Finish: <yes|no>"""
     def _run_tool(self, worker_params: Dict[str, Any]):
         """
         CodeTestRunner tool 호출 + 결과 요약
+
+        - on_aios = True  → AIOS ToolHub (llm_call_tool) 사용
+        - on_aios = False → preloaded AutoTool(code/code_test_runner)를 직접 호출
         """
+
+        # -------------------------
+        # 1) non-AIOS: AutoTool 인스턴스를 직접 실행
+        # -------------------------
+        if not self.on_aios:
+            try:
+                # AutoTool은 내부적으로 BaseTool(CodeTestRunner)을 감싸고 있고,
+                # run(params) 형태로 호출된다고 가정
+                raw_msg = self.tool.run(worker_params)
+            except Exception as e:
+                # 예외도 항상 같은 포맷으로 만들어서 위에서 그대로 파싱 가능하게
+                raw_msg = (
+                    "Status: failure\n"
+                    "Exit code: -1\n\n"
+                    "[STDOUT]\n\n"
+                    "[STDERR]\n"
+                    f"Exception while running CodeTestRunner locally: {e!r}"
+                )
+
+            status, exit_code, err_head = self._summarize_tool_output(raw_msg)
+            return status, exit_code, err_head, raw_msg
+
+        # -------------------------
+        # 2) AIOS 모드: 기존 llm_call_tool 경로
+        # -------------------------
         tool_messages = [
             {
                 "role": "system",
                 "content": (
                     "You are a tool-calling assistant. "
-                    "You MUST call exactly one of the provided tools "
-                    "using the JSON parameters below."
+                    "Use the provided tool when appropriate."
                 ),
             },
             {
                 "role": "user",
-                "content": f"Call the tool with:\n{json.dumps(worker_params)}",
-            },
+                "content": "Run the tests for the generated solution.",
+            }
         ]
-        
+
         try:
             tool_resp = llm_call_tool(
                 agent_name=self.agent_name,
                 messages=tool_messages,
                 tools=self.tools,
                 base_url=aios_kernel_url,
-                llms=self.llms
+                llms=self.llms,
             )["response"]
-        except KeyError as e:
-            return f"CodeTestRunner error: missing required parameter {e!r}"
+            raw_msg = tool_resp.get("response_message", "") or ""
+        except Exception as e:
+            raw_msg = (
+                "Status: failure\n"
+                "Exit code: -1\n\n"
+                "[STDOUT]\n\n"
+                "[STDERR]\n"
+                f"Exception while calling CodeTestRunner via AIOS: {e!r}"
+            )
 
-        raw_msg = tool_resp.get("response_message", "") or ""
         status, exit_code, err_head = self._summarize_tool_output(raw_msg)
         return status, exit_code, err_head, raw_msg
 
