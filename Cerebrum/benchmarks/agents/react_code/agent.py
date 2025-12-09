@@ -39,7 +39,7 @@ class ReActAgent:
     - 반환: 마지막 Candidate (즉 <FINAL_ANSWER> ... </FINAL_ANSWER> 블록)
     """
 
-    def __init__(self, on_aios: bool = True, max_steps: int = 10):
+    def __init__(self, on_aios: bool = True, max_steps: int = 3):
         self.agent_name = "react"
         self.on_aios = on_aios
         self.max_steps = max_steps
@@ -192,7 +192,7 @@ Finish: <yes|no>"""
             # --- 종료 조건 ---
             # Tool이 success AND LLM이 Finish: yes 라고 한 경우에만 종료
             #if tool_status == "success" and finish_flag and final_candidate:
-            if tool_status == "success" and finish_flag == True:
+            if tool_status == "success":#and finish_flag == True:
                 break
 
         return final_candidate
@@ -454,7 +454,7 @@ Finish: <yes|no>"""
 #                              간단 테스트
 # ----------------------------------------------------------------------
 def main():
-    agent = ReActAgent(on_aios=True, max_steps=4)
+    agent = ReActAgent()
 
     task_input = """
 from typing import List
