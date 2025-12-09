@@ -177,90 +177,124 @@ def generator_tool_call_id():
 
 def decode_litellm_tool_calls(response):
     """
-    Decode tool call responses from LiteLLM API format.
+    Decode tool call responses from LiteLLM/OpenAI style objects.
 
-    Args:
-        response: The response object from LiteLLM API.
-
-    Returns:
-        list: A list of dictionaries, each containing:
-              - "name": The name of the function being called.
-              - "parameters": The arguments passed to the function.
-              - "id": The unique identifier of the tool call.
-
-    Example:
-        ```python
-        response = <LiteLLM API response>
-        decoded_calls = decode_litellm_tool_calls(response)
-        print(decoded_calls)  
-        # Output: [{'name': 'translate', 'parameters': {'text': 'hello', 'lang': 'fr'}, 'id': 'uuid1234'}]
-        ```
+    Supports:
+    - ModelResponse (response.choices[0].message.tool_calls)
+    - A raw list of tool_call objects (ChatCompletionMessageFunctionToolCall)
+    - (Fallback) JSON inside message.content
     """
     decoded_tool_calls = []
 
-    if response.choices[0].message.content is None:        
-        assert response.choices[0].message.tool_calls is not None
-        tool_calls = response.choices[0].message.tool_calls
+    # -----------------------------------
+    # 0) ModelResponse 객체인지 먼저 확인
+    # -----------------------------------
+    tool_calls = None
+    content = None
 
+    # Case A: LiteLLM/OpenAI ModelResponse
+    if hasattr(response, "choices"):
+        message = response.choices[0].message
+        tool_calls = getattr(message, "tool_calls", None)
+        content = getattr(message, "content", None)
+
+    # Case B: 이미 tool_calls 리스트를 직접 받은 경우
+    elif isinstance(response, list) and response and hasattr(response[0], "function"):
+        tool_calls = response
+        content = None
+
+    # -----------------------------------
+    # 1) tool_calls 리스트가 있는 경우 (우선 경로)
+    # -----------------------------------
+    if tool_calls:
         for tool_call in tool_calls:
-            parameters = tool_call.function.arguments
-            if isinstance(parameters, str):
-                parameters = json.loads(parameters)
-            decoded_tool_calls.append(
-                {
-                    "name": tool_call.function.name,
-                    "parameters": parameters,
-                    "id": tool_call.id
-                }
-            )
-    else:
-        assert response.choices[0].message.content is not None
+            # OpenAI / LiteLLM 스타일: tool_call.function.name, tool_call.function.arguments
+            fn = getattr(tool_call, "function", None)
+            name = None
+            params = None
 
-        # Some providers return a JSON string; attempt to parse. If parsing fails, treat as "no tools".
-        tool_calls = response.choices[0].message.content
-        if isinstance(tool_calls, str):
-            try:
-                parsed = json.loads(tool_calls)
-                if isinstance(parsed, (list, dict)):
-                    tool_calls = parsed
-                # Unexpected JSON type → no-op; be forgiving.
-                else:
-                    logger.info("decode_litellm_tool_calls: unexpected JSON type for tool_calls: %s", type(parsed))
-                    tool_calls = []
-            except json.JSONDecodeError:
-                logger.info("decode_litellm_tool_calls: non-JSON tool_calls string, treating as no tools.")
+            if fn is not None:
+                name = getattr(fn, "name", None)
+                params = getattr(fn, "arguments", None)
+            else:
+                # 혹시 function이 아닌 다른 구조일 경우를 대비
+                name = getattr(tool_call, "name", None)
+                params = getattr(tool_call, "arguments", None)
+
+            # arguments가 문자열 JSON이면 파싱
+            if isinstance(params, str):
+                try:
+                    params = json.loads(params)
+                except json.JSONDecodeError:
+                    logger.info(
+                        "decode_litellm_tool_calls: arguments is not valid JSON, keeping as raw string."
+                    )
+
+            if name is not None and params is not None:
+                decoded_tool_calls.append(
+                    {
+                        "name": name,
+                        "parameters": params,
+                        "id": getattr(tool_call, "id", generator_tool_call_id()),
+                    }
+                )
+
+        return decoded_tool_calls
+
+    # -----------------------------------
+    # 2) tool_calls가 없고, content 안에 JSON이 들어 있는 경우 (fallback)
+    #    → 지금 vLLM + required 환경에서는 거의 안 쓸 가능성이 큼.
+    # -----------------------------------
+    if isinstance(content, str):
+        tool_calls = content
+        try:
+            parsed = json.loads(tool_calls)
+            if isinstance(parsed, (list, dict)):
+                tool_calls = parsed
+            else:
+                logger.info(
+                    "decode_litellm_tool_calls: unexpected JSON type for tool_calls: %s",
+                    type(parsed),
+                )
                 tool_calls = []
+        except json.JSONDecodeError:
+            logger.info(
+                "decode_litellm_tool_calls: non-JSON tool_calls string, treating as no tools."
+            )
+            tool_calls = []
 
         if not isinstance(tool_calls, list):
             tool_calls = [tool_calls]
-        
+
         try:
-            for tool_call in tool_calls:
+            for tc in tool_calls:
                 name = None
-                if "name" in tool_call:
-                    name = tool_call["name"]
-                elif "function_name" in tool_call:
-                    name = tool_call["function_name"]
-                elif "tool_name" in tool_call:
-                    name = tool_call["tool_name"]
+                if "name" in tc:
+                    name = tc["name"]
+                elif "function_name" in tc:
+                    name = tc["function_name"]
+                elif "tool_name" in tc:
+                    name = tc["tool_name"]
 
                 if name is not None:
                     parameters = None
-                    if "arguments" in tool_call:
-                        parameters = tool_call["arguments"]
-                    elif "parameters" in tool_call:
-                        parameters = tool_call["parameters"]
-                    
+                    if "arguments" in tc:
+                        parameters = tc["arguments"]
+                    elif "parameters" in tc:
+                        parameters = tc["parameters"]
+
                     if parameters is not None:
                         decoded_tool_calls.append(
                             {
                                 "name": name,
                                 "parameters": parameters,
-                                "id": generator_tool_call_id()
+                                "id": generator_tool_call_id(),
                             }
                         )
-        except:
-            logger.info(f"decode_litellm_tool_calls: no valid attribute in tools, treating as no tools")
+        except Exception:
+            logger.info(
+                "decode_litellm_tool_calls: no valid attribute in tools, treating as no tools"
+            )
 
     return decoded_tool_calls
 

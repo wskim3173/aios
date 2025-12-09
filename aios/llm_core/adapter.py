@@ -745,7 +745,7 @@ class LLMAdapter:
                 # Add tools if provided (use processed tool names)
                 if tools:
                     completion_kwargs["tools"] = tools
-                    completion_kwargs["tool_choice"] = "auto" # Or "required" if always needed? Let model decide.
+                    completion_kwargs["tool_choice"] = "required" # Or "required" if always needed? Let model decide.
 
                 # Add JSON formatting if requested
                 # Note: Some models handle "format" kwarg, others "response_format". LiteLLM standardizes.

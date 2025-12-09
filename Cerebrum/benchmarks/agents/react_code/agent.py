@@ -44,8 +44,8 @@ class ReActAgent:
         self.on_aios = on_aios
         self.max_steps = max_steps
 
-        self.model = "meta-llama/Llama-3.1-8B-Instruct"#"gpt-4o-mini"#   # 예: gpt-4o-mini / qwen3 등
-        self.backend = "vllm"#"openai"                             # openai / ollama / vllm
+        self.model = "meta-llama/Llama-3.1-8B-Instruct"#"meta-llama/Llama-3.1-8B-Instruct"#"gpt-4o-mini"#   # 예: gpt-4o-mini / qwen3 등
+        self.backend = "vllm"#"vllm"#"openai"                             # openai / ollama / vllm
         self.llms = [{"name": self.model, "backend": self.backend}]
 
         self.history: List[Dict[str, Any]] = []
@@ -193,9 +193,6 @@ Finish: <yes|no>"""
             if tool_status == "success":
                 break
 
-            # 그 외에는 다음 라운드로
-            time.sleep(0.05)
-
         return final_candidate
 
     # ----------------------------------------------------------------------
@@ -260,16 +257,16 @@ Finish: <yes|no>"""
                 "content": f"Call the tool with:\n{json.dumps(worker_params)}",
             },
         ]
-
+        
         try:
             tool_resp = llm_call_tool(
                 agent_name=self.agent_name,
                 messages=tool_messages,
                 tools=self.tools,
                 base_url=aios_kernel_url,
+                llms=self.llms
             )["response"]
         except KeyError as e:
-            breakpoint()
             return f"CodeTestRunner error: missing required parameter {e!r}"
 
         raw_msg = tool_resp.get("response_message", "") or ""
