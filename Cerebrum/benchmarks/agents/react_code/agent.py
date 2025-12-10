@@ -11,6 +11,8 @@ from litellm import completion
 
 aios_kernel_url = config.get_kernel_url()
 
+HistoryEntry = Dict[str, Any]
+
 
 class ReActAgent:
     """
@@ -35,20 +37,33 @@ class ReActAgent:
     - Tool: code/code_test_runner
       * code  : task_input + override def + body
       * tests : LLM이 만든 테스트 코드
-    - 종료: tool Status == success AND Finish == yes
+    - 종료: tool Status == success AND Finish == yes (현재는 success 만으로 종료)
     - 반환: 마지막 Candidate (즉 <FINAL_ANSWER> ... </FINAL_ANSWER> 블록)
     """
+
+    # ------------------------------------------------------------------
+    # 정규식 패턴 (한 번만 컴파일해서 재사용)
+    # ------------------------------------------------------------------
+    _OBS_PATTERN = re.compile(r"(?im)^\s*Observation:\s*(.*)$")
+    _THOUGHT_PATTERN = re.compile(r"(?im)^\s*Thought:\s*(.*)$")
+    _FINISH_PATTERN = re.compile(r"(?im)^\s*Finish:\s*(yes|no)\s*$")
+    _FINAL_PATTERN = re.compile(
+        r"<FINAL_ANSWER>(.*?)</FINAL_ANSWER>", re.DOTALL | re.IGNORECASE
+    )
+    _TESTS_PATTERN = re.compile(
+        r"<TESTS>(.*?)</TESTS>", re.DOTALL | re.IGNORECASE
+    )
 
     def __init__(self, on_aios: bool = True, max_steps: int = 3):
         self.agent_name = "react"
         self.on_aios = on_aios
         self.max_steps = max_steps
 
-        self.model = "gpt-4o-mini"#"meta-llama/Llama-3.1-8B-Instruct"#"gpt-4o-mini"#   # 예: gpt-4o-mini / qwen3 등
-        self.backend = "openai"#"vllm"#"openai"                             # openai / ollama / vllm
+        self.model = "meta-llama/Llama-3.1-8B-Instruct"  # gpt-4o-mini / meta-llama/Llama-3.1-8B-Instruct
+        self.backend = "vllm"  # openai / vllm
         self.llms = [{"name": self.model, "backend": self.backend}]
 
-        self.history: List[Dict[str, Any]] = []
+        self.history: List[HistoryEntry] = []
 
         # --- CodeTestRunner tool 준비 ---
         self.tool = AutoTool.from_preloaded("code/code_test_runner")
@@ -70,7 +85,71 @@ class ReActAgent:
             raise ValueError("Could not find function header (def ...) in task_input.")
 
         # System prompt: Observation / Thought / Action + tool 사용 규칙
-        system_prompt = f"""
+        system_prompt = self._build_system_prompt(task_input)
+        messages = [{"role": "system", "content": system_prompt}]
+
+        final_candidate = ""
+
+        for step in range(self.max_steps):
+            # --- Step prompt: 짧은 history 요약만 제공 (tool 결과 반영) ---
+            step_prompt = f"""History (latest first, up to 3):
+{self._format_history_for_prompt(self.history[-3:])}
+
+{self._build_step_prompt()}"""
+
+            messages.append({"role": "user", "content": step_prompt})
+
+            # --- LLM 호출 ---
+            raw = self._call_llm(messages)
+
+            # --- plain-text 파싱 (Observation / Thought / Action / Finish) ---
+            step_obj = self._parse_react_step(raw)
+            observation = step_obj["observation"]
+            thought = step_obj["thought"]
+            candidate = step_obj["candidate"]     # <FINAL_ANSWER> ... 포함
+            body = step_obj["body"]               # 실제 함수 몸체 (4-space indent)
+            tests = step_obj["tests"]             # <TESTS> ... 안의 내용 (Python 코드)
+            finish_flag = step_obj["finish"]      # bool (yes → True)
+
+            final_candidate = candidate  # 항상 최신 Candidate를 최종 후보로 유지
+
+            # --- Code + Tests 구성해서 tool 실행 ---
+            full_code = self._build_full_code(task_input, func_header, body)
+            worker_params = {
+                "code": full_code,
+                "tests": tests,
+                "timeout": 5.0,
+            }
+
+            tool_status, exit_code, err_head, raw_tool_msg = self._run_tool(worker_params)
+
+            # --- history에 tool 결과 반영 ---
+            self.history.append(
+                {
+                    "round": step,
+                    "observation": observation,
+                    "thought": thought,
+                    "finish": finish_flag,
+                    "status": tool_status,
+                    "exit_code": exit_code,
+                    "error_head": err_head,
+                }
+            )
+
+            # --- 종료 조건 ---
+            # 현재 정책: 툴 결과가 success면 Finish 플래그와 상관없이 종료.
+            # (Finish까지 보려면 아래 주석 처리된 조건으로 바꾸면 됨.)
+            # if tool_status == "success" and finish_flag and final_candidate:
+            if tool_status == "success":
+                break
+
+        return final_candidate
+
+    # ----------------------------------------------------------------------
+    #                      프롬프트 빌더 (System / Step)
+    # ----------------------------------------------------------------------
+    def _build_system_prompt(self, task_input: str) -> str:
+        return f"""
 You are a senior Python assistant solving a HumanEval-style code-completion task
 using a compact ReAct loop (Observation → Thought → Action) and the tool "code_test_runner".
 
@@ -124,16 +203,9 @@ Task:
 {task_input}
 """.strip()
 
-        messages = [{"role": "system", "content": system_prompt}]
-
-        final_candidate = ""
-
-        for step in range(self.max_steps):
-            # --- Step prompt: 짧은 history 요약만 제공 (tool 결과 반영) ---
-            step_prompt = f"""History (latest first, up to 3):
-{self._format_history_for_prompt(self.history[-3:])}
-
-Now continue the ReAct loop and output EXACTLY:
+    @staticmethod
+    def _build_step_prompt() -> str:
+        return """Now continue the ReAct loop and output EXACTLY:
 
 Observation: ...
 Thought: ...
@@ -145,57 +217,6 @@ Action:
 ...
 </TESTS>
 Finish: <yes|no>"""
-
-            messages.append({"role": "user", "content": step_prompt})
-
-            # --- LLM 호출 ---
-            raw = self._call_llm(messages)
-
-            # --- plain-text 파싱 (Observation / Thought / Action / Finish) ---
-            step_obj = self._parse_react_step(raw)
-            observation = step_obj["observation"]
-            thought = step_obj["thought"]
-            candidate = step_obj["candidate"]     # <FINAL_ANSWER> ... 포함
-            body = step_obj["body"]               # 실제 함수 몸체 (4-space indent)
-            tests = step_obj["tests"]             # <TESTS> ... 안의 내용 (Python 코드)
-            finish_flag = step_obj["finish"]      # bool (yes → True)
-
-            final_candidate = candidate  # 항상 최신 Candidate를 최종 후보로 유지
-
-            #breakpoint()
-
-            # --- Code + Tests 구성해서 tool 실행 ---
-            full_code = self._build_full_code(task_input, func_header, body)
-            worker_params = {
-                "code": full_code,
-                "tests": tests,
-                "timeout": 5.0,
-            }
-
-            tool_status, exit_code, err_head, raw_tool_msg = self._run_tool(worker_params)
-
-            # --- history에 tool 결과 반영 ---
-            self.history.append(
-                {
-                    "round": step,
-                    "observation": observation,
-                    "thought": thought,
-                    "finish": finish_flag,
-                    "status": tool_status,
-                    "exit_code": exit_code,
-                    "error_head": err_head,
-                }
-            )
-
-            #breakpoint()
-
-            # --- 종료 조건 ---
-            # Tool이 success AND LLM이 Finish: yes 라고 한 경우에만 종료
-            #if tool_status == "success" and finish_flag and final_candidate:
-            if tool_status == "success":#and finish_flag == True:
-                break
-
-        return final_candidate
 
     # ----------------------------------------------------------------------
     #                           LLM 호출 헬퍼
@@ -248,31 +269,33 @@ Finish: <yes|no>"""
         - on_aios = True  → AIOS ToolHub (llm_call_tool) 사용
         - on_aios = False → preloaded AutoTool(code/code_test_runner)를 직접 호출
         """
+        if self.on_aios:
+            raw_msg = self._run_tool_aios()
+        else:
+            raw_msg = self._run_tool_local(worker_params)
 
-        # -------------------------
-        # 1) non-AIOS: AutoTool 인스턴스를 직접 실행
-        # -------------------------
-        if not self.on_aios:
-            try:
-                # AutoTool은 내부적으로 BaseTool(CodeTestRunner)을 감싸고 있고,
-                # run(params) 형태로 호출된다고 가정
-                raw_msg = self.tool.run(worker_params)
-            except Exception as e:
-                # 예외도 항상 같은 포맷으로 만들어서 위에서 그대로 파싱 가능하게
-                raw_msg = (
-                    "Status: failure\n"
-                    "Exit code: -1\n\n"
-                    "[STDOUT]\n\n"
-                    "[STDERR]\n"
-                    f"Exception while running CodeTestRunner locally: {e!r}"
-                )
+        status, exit_code, err_head = self._summarize_tool_output(raw_msg)
+        return status, exit_code, err_head, raw_msg
 
-            status, exit_code, err_head = self._summarize_tool_output(raw_msg)
-            return status, exit_code, err_head, raw_msg
+    def _run_tool_local(self, worker_params: Dict[str, Any]) -> str:
+        """
+        non-AIOS 모드: AutoTool 인스턴스를 직접 실행
+        """
+        try:
+            return self.tool.run(worker_params)
+        except Exception as e:
+            return (
+                "Status: failure\n"
+                "Exit code: -1\n\n"
+                "[STDOUT]\n\n"
+                "[STDERR]\n"
+                f"Exception while running CodeTestRunner locally: {e!r}"
+            )
 
-        # -------------------------
-        # 2) AIOS 모드: 기존 llm_call_tool 경로
-        # -------------------------
+    def _run_tool_aios(self) -> str:
+        """
+        AIOS 모드: 기존 llm_call_tool 경로 (worker_params는 아직 사용하지 않음)
+        """
         tool_messages = [
             {
                 "role": "system",
@@ -284,7 +307,7 @@ Finish: <yes|no>"""
             {
                 "role": "user",
                 "content": "Run the tests for the generated solution.",
-            }
+            },
         ]
 
         try:
@@ -295,18 +318,15 @@ Finish: <yes|no>"""
                 base_url=aios_kernel_url,
                 llms=self.llms,
             )["response"]
-            raw_msg = tool_resp.get("response_message", "") or ""
+            return tool_resp.get("response_message", "") or ""
         except Exception as e:
-            raw_msg = (
+            return (
                 "Status: failure\n"
                 "Exit code: -1\n\n"
                 "[STDOUT]\n\n"
                 "[STDERR]\n"
                 f"Exception while calling CodeTestRunner via AIOS: {e!r}"
             )
-
-        status, exit_code, err_head = self._summarize_tool_output(raw_msg)
-        return status, exit_code, err_head, raw_msg
 
     @staticmethod
     def _summarize_tool_output(msg: str):
@@ -336,7 +356,7 @@ Finish: <yes|no>"""
     #                        HISTORY 포맷 (프롬프트용)
     # ----------------------------------------------------------------------
     @staticmethod
-    def _format_history_for_prompt(hist: List[Dict[str, Any]]) -> str:
+    def _format_history_for_prompt(hist: List[HistoryEntry]) -> str:
         if not hist:
             return "[]"
         lines = []
@@ -371,17 +391,15 @@ Finish: <yes|no>"""
         t = text.replace("\r\n", "\n").replace("\r", "\n")
 
         # Observation
-        m_obs = re.search(r"(?im)^\s*Observation:\s*(.*)$", t)
+        m_obs = ReActAgent._OBS_PATTERN.search(t)
         observation = m_obs.group(1).strip() if m_obs else ""
 
         # Thought
-        m_th = re.search(r"(?im)^\s*Thought:\s*(.*)$", t)
+        m_th = ReActAgent._THOUGHT_PATTERN.search(t)
         thought = m_th.group(1).strip() if m_th else ""
 
         # Candidate body (within <FINAL_ANSWER>...</FINAL_ANSWER>)
-        m_body = re.search(
-            r"<FINAL_ANSWER>(.*?)</FINAL_ANSWER>", t, re.DOTALL | re.IGNORECASE
-        )
+        m_body = ReActAgent._FINAL_PATTERN.search(t)
         if not m_body:
             body = ""
             candidate = ""
@@ -390,13 +408,11 @@ Finish: <yes|no>"""
             candidate = f"<FINAL_ANSWER>\n{body}\n</FINAL_ANSWER>"
 
         # Tests (within <TESTS>...</TESTS>)
-        m_tests = re.search(
-            r"<TESTS>(.*?)</TESTS>", t, re.DOTALL | re.IGNORECASE
-        )
+        m_tests = ReActAgent._TESTS_PATTERN.search(t)
         tests = m_tests.group(1).strip("\n") if m_tests else ""
 
         # Finish
-        m_fin = re.search(r"(?im)^\s*Finish:\s*(yes|no)\s*$", t)
+        m_fin = ReActAgent._FINISH_PATTERN.search(t)
         finish = False
         if m_fin:
             finish = m_fin.group(1).lower() == "yes"
