@@ -113,6 +113,8 @@ class ReActAgent:
 
             final_candidate = candidate  # 항상 최신 Candidate를 최종 후보로 유지
 
+            # breakpoint()
+
             # --- Code + Tests 구성해서 tool 실행 ---
             full_code = self._build_full_code(task_input, func_header, body)
             worker_params = {
@@ -122,6 +124,8 @@ class ReActAgent:
             }
 
             tool_status, exit_code, err_head, raw_tool_msg = self._run_tool(worker_params)
+
+            # breakpoint()
 
             # --- history에 tool 결과 반영 ---
             self.history.append(
@@ -270,7 +274,7 @@ Finish: <yes|no>"""
         - on_aios = False → preloaded AutoTool(code/code_test_runner)를 직접 호출
         """
         if self.on_aios:
-            raw_msg = self._run_tool_aios()
+            raw_msg = self._run_tool_aios(worker_params)
         else:
             raw_msg = self._run_tool_local(worker_params)
 
@@ -292,22 +296,51 @@ Finish: <yes|no>"""
                 f"Exception while running CodeTestRunner locally: {e!r}"
             )
 
-    def _run_tool_aios(self) -> str:
-        """
-        AIOS 모드: 기존 llm_call_tool 경로 (worker_params는 아직 사용하지 않음)
-        """
+    def _run_tool_aios(self, worker_params: Dict[str, Any]) -> str:
+
+        code = worker_params.get("code", "")
+        tests = worker_params.get("tests", "")
+        timeout = float(worker_params.get("timeout", 5.0))
+
         tool_messages = [
             {
                 "role": "system",
                 "content": (
-                    "You are a tool-calling assistant. "
-                    "Use the provided tool when appropriate."
-                ),
+                    "You are a tool-calling assistant.\n"
+                    "You have access to a single tool named `code/code_test_runner`.\n"
+                    "\n"
+                    "This tool executes Python code together with test code in an isolated subprocess. "
+                    "It expects a JSON object with the following fields as its arguments:\n"
+                    "  - `code`   (string): FULL Python source code to be tested.\n"
+                    "  - `tests`  (string): FULL Python test code that uses the definitions in `code`.\n"
+                    "  - `timeout` (number, optional): timeout in seconds for running the tests.\n"
+                    "\n"
+                    "CRITICAL RULES:\n"
+                    "1. Do NOT pass file names or file paths (e.g. 'solution.py', 'test_solution.py').\n"
+                    "2. Instead, use the RAW code strings that are provided between <CODE> and <TESTS>.\n"
+                    "3. Do NOT summarize, shorten, or modify the code or tests; copy them EXACTLY.\n"
+                    "4. The `timeout` argument MUST be a NUMBER (e.g. 5 or 5.0), NOT a string.\n"
+                    "5. When calling the tool, construct arguments like:\n"
+                    "   {\"code\": <string>, \"tests\": <string>, \"timeout\": <number>}.\n"
+                    "\n"
+                    "Your only job is to call `code/code_test_runner` ONCE with the correct arguments."
+                )
             },
             {
                 "role": "user",
-                "content": "Run the tests for the generated solution.",
-            },
+                "content": (
+                    "Run the tool `code/code_test_runner` on the following code and tests.\n\n"
+                    f"Use timeout = {timeout}.\n\n"
+                    "<CODE>\n"
+                    f"{code}\n"
+                    "</CODE>\n\n"
+                    "<TESTS>\n"
+                    f"{tests}\n"
+                    "</TESTS>\n"
+                    "\n"
+                    "Call the tool now using these exact strings for `code` and `tests`."
+                )
+            }
         ]
 
         try:
@@ -318,7 +351,9 @@ Finish: <yes|no>"""
                 base_url=aios_kernel_url,
                 llms=self.llms,
             )["response"]
+            #breakpoint()
             return tool_resp.get("response_message", "") or ""
+            
         except Exception as e:
             return (
                 "Status: failure\n"
@@ -327,6 +362,7 @@ Finish: <yes|no>"""
                 "[STDERR]\n"
                 f"Exception while calling CodeTestRunner via AIOS: {e!r}"
             )
+        
 
     @staticmethod
     def _summarize_tool_output(msg: str):
@@ -459,8 +495,8 @@ Finish: <yes|no>"""
         """
         script_lines = []
         script_lines.append(task_input.rstrip("\n"))
-        script_lines.append("\n\n# --- Solution override ---")
-        script_lines.append(func_header.rstrip(":") + ":")
+        #script_lines.append("\n\n# --- Solution override ---")
+        #script_lines.append(func_header.rstrip(":") + ":")
         script_lines.append(body)  # body는 이미 줄마다 4 space indentation
 
         return "\n".join(script_lines) + "\n"

@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 import subprocess
 from typing import Optional
@@ -26,6 +27,7 @@ class CodeTestRunner(BaseTool):
 
         # Default timeout in seconds for test execution
         self.default_timeout: float = 5.0
+        self._escape_pattern = re.compile(r"\\[nrt'\"\\]")
 
     def run(self, params) -> str:
         """
@@ -52,6 +54,11 @@ class CodeTestRunner(BaseTool):
             tests = params["tests"]
         except KeyError as e:
             return f"CodeTestRunner error: missing required parameter {e!r}"
+
+        code = self._normalize_code_string(code)
+        tests = self._normalize_code_string(tests)
+
+        # breakpoint()
 
         timeout = params.get("timeout", self.default_timeout)
 
@@ -113,6 +120,33 @@ class CodeTestRunner(BaseTool):
             )
         except Exception as e:
             return f"CodeTestRunner internal error during execution: {e!r}"
+
+    def _normalize_code_string(self, s: str) -> str:
+        """
+        LLM이 코드/테스트를 문자열 리터럴처럼 이스케이프해서 넘겼을 때,
+        (\\n, \\" 등) 실제 코드로 되돌려준다.
+
+        - unicode_escape 디코딩은:
+          '\\n'  →  개행
+          '\\"'  →  "
+          "\\'"  →  '
+          '\\t'  →  탭
+          '\\\\' →  역슬래시
+        - 원본에 이런 이스케이프가 아예 없다면 그대로 반환.
+        """
+        if not isinstance(s, str):
+            return s
+
+        # escape 시퀀스 흔적이 하나도 없으면 건드리지 않음
+        if not self._escape_pattern.search(s):
+            return s
+
+        try:
+            # 한 번 전체를 "파이썬 이스케이프"로 디코딩
+            return bytes(s, "utf-8").decode("unicode_escape")
+        except Exception:
+            # 혹시 말도 안 되는 문자열이면 안전하게 원본 유지
+            return s
 
     def get_tool_call_format(self):
         """
