@@ -3,32 +3,33 @@ import time
 import re
 import threading
 
-from cerebrum.llm.apis import llm_chat   # ✅ JSON이 아니라 일반 채팅 API 사용
+from cerebrum.llm.apis import llm_chat   # Use plain chat API instead of JSON-based API
 from cerebrum.config.config_manager import config
 from litellm import completion
 
 aios_kernel_url = config.get_kernel_url()
 
-class ReActAgent:
+class ReActAgentPlain:
     """
     ReActAgent (plain-text version)
+
     - No JSON schema
     - No external tools
-    - Simple string template + regex parsing
-    - Returns properly indented function body for HumanEval
+    - Simple string templates + regex-based parsing
+    - Returns a properly indented function body for HumanEval
     """
 
     def __init__(self, on_aios: bool = True, max_steps: int = 4):
-        self.agent_name = "react"
+        self.agent_name = "react_plain"
         self.on_aios = on_aios
         self.max_steps = max_steps
-        self.model = "meta-llama/Llama-3.1-8B-Instruct"   #gpt-4o-mini #qwen3:1.7b #meta-llama/Llama-3.1-8B-Instruct
-        self.backend = "vllm"     #openai #ollama #vllm
+        self.model = "meta-llama/Llama-3.1-8B-Instruct"   # gpt-4o-mini / qwen3:1.7b / meta-llama/Llama-3.1-8B-Instruct
+        self.backend = "vllm"     # openai / ollama / vllm
         self.history: List[Dict[str, Any]] = []
         self.llms = [{"name": self.model, "backend": self.backend}]
         self.t = threading.current_thread()
 
-    # --- Core Loop ---
+    # --- Core loop ---
     def run(self, task_input: str) -> str:
         self.history.clear()
 
@@ -55,7 +56,7 @@ Finish: <true|false>
 
 # RULES
 1. Do NOT include 'def', parameters, or docstring.
-2. Each code line MUST begin with **exactly 4 spaces**.
+2. Each code line MUST begin with exactly 4 spaces.
 3. The first non-empty line must be "<FINAL_ANSWER>".
 4. The last non-empty line must be "</FINAL_ANSWER>".
 5. No markdown fences, no extra explanations.
@@ -88,7 +89,7 @@ No external tools. You must end with a clean FUNCTION BODY only (no def header).
 Thought: <one short sentence about what to fix/check>
 
 Candidate:
-The Candidate should strictly follow the following format and requirements:
+The Candidate must strictly follow the format and requirements below.
 
     Format:
     Print ONLY the following wrapper with your code body inside.
@@ -102,20 +103,20 @@ The Candidate should strictly follow the following format and requirements:
         return result
     </FINAL_ANSWER>
 
-    Requirements: 
-    1. YOUR FINAL ANSWER must be a piece of code that can be directly filled into the given code at the <CURRENT_CURSOR_POSITION> marker.
-    2. Only include the code you're adding, don't include the original function definition or comments.
-    3. Do not use extra code quotes like ```python``` to wrap the code.
-    4. Make sure the syntax of the code is correct, especially pay attention to proper indentation.
+    Requirements:
+    1. Your final answer must be code that can be directly inserted at <CURRENT_CURSOR_POSITION>.
+    2. Only include the code you are adding (do not include the original function definition).
+    3. Do not wrap code with ```python``` or similar fences.
+    4. Ensure correct Python syntax and indentation.
     5. Maintain the same indentation level as the surrounding code.
-    6. If you're completing a function body, ensure all code is properly indented inside the function.
-    7. Check that all return statements, loops, and conditional blocks have correct indentation.
-    8. Ensure your code aligns with the original code style and indentation pattern.
+    6. If completing a function body, ensure all lines are properly indented.
+    7. Ensure return statements, loops, and conditionals are correctly indented.
+    8. Align with the original code style and indentation pattern.
 
 Finish: <true|false>
 
 Rules:
-- Think briefly about pitfalls (edge cases, off-by-one, etc.)
+- Briefly consider pitfalls (edge cases, off-by-one errors, etc.)
 - If confident the candidate is final, set Finish: true
 - Otherwise, set Finish: false and wait for the next round
 - Output NOTHING except the three fields above
@@ -135,7 +136,7 @@ Candidate:
 Finish: <true|false>"""
             messages.append({"role": "user", "content": step_prompt})
 
-            # --- Branch on AIOS / non-AIOS ---
+            # --- Branch between AIOS and non-AIOS execution ---
             if self.on_aios:
                 resp = llm_chat(
                     agent_name=self.agent_name,
@@ -145,9 +146,9 @@ Finish: <true|false>"""
                 )
                 raw = resp["response"]["response_message"]
             else:
-                if self.model == "meta-llama/Llama-3.1-8B-Instruct": 
+                if self.model == "meta-llama/Llama-3.1-8B-Instruct":
                     non_aios_resp = completion(
-                        model="hosted_vllm/"+self.model,
+                        model="hosted_vllm/" + self.model,
                         messages=messages,
                         base_url="http://127.0.0.1:8091/v1",
                         temperature=0.2,
@@ -171,7 +172,7 @@ Finish: <true|false>"""
                         raw = non_aios_resp.get("content", "")
                 raw = raw or ""
 
-            # --- Plain ReAct parsing ---
+            # --- Plain-text ReAct parsing ---
             step_obj = self._parse_plain_react(raw)
             thought = step_obj["thought"]
             cand    = step_obj["candidate"]
@@ -193,34 +194,39 @@ Finish: <true|false>"""
 
         return final_code
 
-    # --- Helper: format history into short lines ---
+    # --- Helper: format history as compact text ---
     @staticmethod
     def _format_history_for_prompt(hist: List[Dict[str, Any]]) -> str:
         if not hist:
             return "[]"
         lines = []
         for h in reversed(hist):
-            lines.append(f"- Round {h['round']}: thought_len={len(h.get('thought',''))}, candidate_len={h.get('candidate_len',0)}, finish={h.get('finish',False)}")
+            lines.append(
+                f"- Round {h['round']}: "
+                f"thought_len={len(h.get('thought',''))}, "
+                f"candidate_len={h.get('candidate_len',0)}, "
+                f"finish={h.get('finish',False)}"
+            )
         return "\n".join(lines)
 
-    # --- Helper: plain-text ReAct parser ---
+    # --- Helper: plain-text ReAct output parser ---
     @staticmethod
     def _parse_plain_react(text: str) -> Dict[str, Any]:
         """
-        Expecting exactly:
+        Expected format:
         Thought: ...
         Candidate:
         ...
         Finish: true/false
         """
-        # normalize line endings
+        # Normalize line endings
         t = text.replace("\r\n", "\n").replace("\r", "\n")
 
         # 1) Thought
         m_thought = re.search(r"(?im)^\s*Thought:\s*(.*)$", t)
-        thought = (m_thought.group(1).strip() if m_thought else "")
+        thought = m_thought.group(1).strip() if m_thought else ""
 
-        # 2) Candidate block: from 'Candidate:' line until the next 'Finish:' line (or end)
+        # 2) Candidate block: from 'Candidate:' to 'Finish:' (or end)
         m_cand_start = re.search(r"(?im)^\s*Candidate:\s*$", t)
         candidate = ""
         if m_cand_start:
@@ -232,16 +238,10 @@ Finish: <true|false>"""
             else:
                 candidate = t[start:].strip("\n")
 
-        # 3) Finish
+        # 3) Finish flag
         m_finish = re.search(r"(?im)^\s*Finish:\s*(true|false)\s*$", t)
         finish = False
         if m_finish:
             finish = (m_finish.group(1).lower() == "true")
 
         return {"thought": thought, "candidate": candidate, "finish": finish}
-        t = text.strip()
-        if t.startswith("```"):
-            t = t.strip("`")
-            if t.startswith("python"):
-                t = t[len("python"):].lstrip()
-        return t

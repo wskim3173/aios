@@ -9,11 +9,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datasets import load_dataset
 from tqdm import tqdm
 
-# 그대로 재사용: AGENT 매핑과 파이프라인 메타
-from ..experiment_core import MetaData, AGENT_TYPE_MAPPING_AIOS  # :contentReference[oaicite:2]{index=2}
-from ..utils import get_parser  # :contentReference[oaicite:3]{index=3}
+# Reuse as-is: AGENT mapping and pipeline metadata
+from ..experiment_core import MetaData, AGENT_TYPE_MAPPING_AIOS
+from ..utils import get_parser
 
-# ===== helpers (기존 inference.py의 로직을 유지) =====
+# ===== helpers (keep logic identical to the original inference.py) =====
 def parse_result(result: str) -> str:
     start_idx = result.find("<FINAL_ANSWER>")
     end_idx = result.find("</FINAL_ANSWER>")
@@ -34,9 +34,11 @@ def build_check_program(prompt: str, completion: str, test: str, entry_point: st
 
 # ===== core =====
 def process_one_with_agent(agent, data: Dict[str, Any], programs_dir: str) -> Dict[str, Any]:
-    # agent.run_humaneval은 기존 구현과 동일한 인터페이스를 기대
+    # agent.run_humaneval is expected to follow the same interface as the existing implementation
     result = agent.run(data["prompt"])
-    #result = parse_result(result)
+    
+    if agent.agent_name == "react_plain":
+        result = parse_result(result)
 
     check_program = build_check_program(
         prompt=data["prompt"],
@@ -53,36 +55,40 @@ def process_one_with_agent(agent, data: Dict[str, Any], programs_dir: str) -> Di
     return {"task_id": data["task_id"], "completion": result}
 
 def main():
-    # 기본 파서는 재사용하되 멀티에이전트 옵션 추가
-    parser = get_parser()  # --data_name, --split, --output_file, --on_aios, --max_num 등
+    # Reuse the base parser and add multi-agent options
+    parser = get_parser()  # --data_name, --split, --output_file, --on_aios, --max_num, etc.
     #parser.add_argument("--agent_type", type=str, default="react",
     #                    help="Agent kind for HumanEval (e.g., react, cot)")
     parser.add_argument("--agent_num", type=int, default=1,
                         help="Number of concurrent agents (threads)")
     args = parser.parse_args()
 
-    # agent_type 해석: experiment_core의 키 규칙을 그대로 사용
+    # Resolve agent_type using the same key convention as experiment_core
     full_agent_key = f"humaneval:{args.agent_type}"
     if full_agent_key not in AGENT_TYPE_MAPPING_AIOS:
-        valid = ", ".join(sorted(k.split(":")[1] for k in AGENT_TYPE_MAPPING_AIOS if k.startswith("humaneval:")))
-        raise ValueError(f"Unknown agent_type '{args.agent_type}'. Valid for HumanEval: {valid}")
+        valid = ", ".join(sorted(
+            k.split(":")[1] for k in AGENT_TYPE_MAPPING_AIOS if k.startswith("humaneval:")
+        ))
+        raise ValueError(
+            f"Unknown agent_type '{args.agent_type}'. Valid for HumanEval: {valid}"
+        )
 
     AgentClass = AGENT_TYPE_MAPPING_AIOS[full_agent_key]
 
-    # 데이터셋 로드
+    # Load dataset
     dataset = load_dataset(args.data_name, split=args.split)
 
-    # 실행 상한
+    # Execution upper bound
     max_num = args.max_num if args.max_num is not None else len(dataset)
     items = list(dataset)[:max_num]
 
-    # 에이전트 풀 생성 (동시성은 스레드풀로)
+    # Create agent pool (concurrency handled via thread pool)
     agents = [AgentClass(args.on_aios) for _ in range(max(1, args.agent_num))]
 
-    # 프로그램 저장 경로 (기존 경로 스타일 유지)
+    # Program output directory (keep existing path style)
     programs_dir = os.path.join(os.path.dirname(__file__), "programs")
 
-    # 제출 작업 생성
+    # Submit jobs
     results: List[Dict[str, Any]] = [None] * len(items)
     with ThreadPoolExecutor(max_workers=max(1, args.agent_num)) as ex:
         futures = {}
@@ -91,11 +97,15 @@ def main():
             fut = ex.submit(process_one_with_agent, agent, data, programs_dir)
             futures[fut] = idx
 
-        for fut in tqdm(as_completed(futures), total=len(futures), desc="Running HumanEval (multi-agent)"):
+        for fut in tqdm(
+            as_completed(futures),
+            total=len(futures),
+            desc="Running HumanEval (multi-agent)"
+        ):
             idx = futures[fut]
             results[idx] = fut.result()
 
-    # 출력 저장
+    # Save outputs
     write_output_func(results, args.output_file)
 
 if __name__ == "__main__":

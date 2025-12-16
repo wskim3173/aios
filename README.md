@@ -37,8 +37,8 @@
 
   vllm serve meta-llama/Llama-3.1-8B-Instruct \
   --port 8091 \
-  --max-model-len 3072 \
-  --max-num-seqs 8 \
+  --max-model-len 8192 \
+  --max-num-seqs 64 \
   --gpu-memory-utilization 0.88 \
   --dtype bfloat16
 
