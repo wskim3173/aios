@@ -1,12 +1,15 @@
 from typing import Dict, Any, List
 
 import json
+import re
+import textwrap
 
 from cerebrum.llm.apis import llm_chat_with_json_output
 from cerebrum.utils import _parse_json_output
 from cerebrum.config.config_manager import config
 from cerebrum.interface import AutoTool
 
+from typing import Tuple
 from litellm import completion
 
 aios_kernel_url = config.get_kernel_url()
@@ -25,7 +28,6 @@ class ReActAgent:
         self.history = []
 
         self.tool = AutoTool.from_preloaded("code/code_test_runner")
-
     # ----------------------------------------------------------------------
     #                           MAIN RUN LOOP
     # ----------------------------------------------------------------------
@@ -33,189 +35,288 @@ class ReActAgent:
         self.history.clear()
 
         system_prompt = f"""
-1. Task
-You are a Python coding agent that iteratively improves a solution so that it passes the given tests.
-When producing Python code, always format it using proper indentation and newlines.
-You must complete a given Python function:
-<function_definition>
-{task_input}
-</function_definition>
+    You are a Python coding agent following a ReAct loop:
+    Observation -> Reasoning -> Action (run tool OR finish).
 
-2. Output
-You must reply with one valid JSON object
-The JSON must have exactly the following fields:
+    ## Task
+    You must solve the programming task described in <function_definition>.
+    You will iteratively propose a FULL Python function implementation, run tests via the tool,
+    then use the tool result (status/stderr) to improve the next attempt.
 
-- "observation": your short summary of the current situation.
-- "reasoning": your reasoning about what to do next.
-- "action": one of "run" or "finish".
-- "tool_params": parameters for the tool
+    <function_definition>
+    {task_input}
+    </function_definition>
 
-Output requirements (must match the system prompt):
-Return ONLY the JSON object.
-Do NOT wrap it in markdown fences.
-Do NOT add any extra text before or after the JSON.
+    ## Output (STRICT)
+    Return ONLY one valid JSON object with EXACTLY these fields:
+    - "observation": short factual summary of the latest situation
+    - "reasoning": what to change next and why
+    - "action": one of ["run", "finish"]
+    - "answer": a SINGLE string containing BOTH tagged sections:
 
-3. Semantics
-- "run": If you think running the tool is necessary
-- "finish": You believe the current solution is final and correct; stop the loop.
+    <CODE>
+    ... full Python code including the TARGET function definition (def ...:) ...
+    </CODE>
+    <TESTS>
+    ... assert-based tests that call the target function ...
+    </TESTS>
 
-When "action" == "run", you must set "tool_params" to an object of the form:
-{{
-  "code":  "Python solution code to test",
-  "tests": "Python test code to run with that solution"
-}}
-When "action" is "finish", you must set "tool_params" to null.
+    ## Formatting rules (VERY IMPORTANT)
+    1) The answer string MUST include EXACTLY ONE <CODE>...</CODE> block
+    and EXACTLY ONE <TESTS>...</TESTS> block. Use proper closing tags.
+    Do NOT add any extra tags. Do NOT output "CODE ..." or "TESTS ..." as plain text. 
+    Use literal \\n for newlines inside the string.
+    
+    2) Inside <CODE> (STRICT — full function this time):
+    - You MUST include the complete function definition line: def ...:
+    - The function name and parameters MUST match the one in <function_definition>.
+    - Avoid unnecessary imports. (The environment will prepend header/imports already.)
+    - The function header MUST be on its own line, ending with ":" and NOTHING after the colon.
+    - Valid:  def f(x):\n    ...
+    - Invalid: def f(x): return x+1
+    - Invalid: def f(x): if x<0: return 0 else: return 1
+    - The function body MUST start on the next line and use a normal indented block (4 spaces).
+    - Do NOT use one-line function bodies.
+    - Do NOT put "if/for/while/return" on the same line as the def header.
 
-5. Examples of valid outputs
-{{
-  "observation": "Previous tests failed with an IndexError.",
-  "reasoning": "I fixed the loop bounds and now want to rerun the tests.",
-  "action": "run",
-  "tool_params": {{
-    "code": "    return number - int(number)",
-    "tests": "assert truncate_number(3.5) == 0.5"
-  }}
-}}
-"""
+    3) Inside <TESTS>:
+    - Inside <TESTS>, you MUST write ONLY plain Python `assert` statements.
+    - Provide at least 2 assert statements.
+    - Tests MUST directly call the target function.
+    - NO imports (no `import unittest`, no `from typing import ...`)
+    - Keep tests small/fast (no large loops, no randomness, no I/O).
+
+    4) Example:
+    - Valid answer:
+    "<CODE>\ndef add(a, b):\n    return a + b\n</CODE>\n<TESTS>\nassert add(1, 2) == 3\nassert add(0, 0) == 0\nassert add(-1, 1) == 0\n</TESTS>"
+
+    - Invalid answer:
+    "CODE def add(a,b): return a+b\nTESTS assert add(1,2)==3"
+    """.strip()
+
         messages = [{"role": "system", "content": system_prompt}]
-        final_candidate = ""        
+        final_code = ""
+
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "orchestration",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "observation": {"type": "string"},
+                        "reasoning": {"type": "string"},
+                        "action": {"type": "string", "enum": ["run", "finish"]},
+                        "answer": {"type": "string"},
+                    },
+                    "required": ["observation", "reasoning", "action", "answer"],
+                    "additionalProperties": False,
+                },
+            },
+        }
 
         for step in range(self.max_steps):
-            status = ""
-            stderr = ""
             step_prompt = f"""
-##Step-by-Step Execution Protocol.
-Here are the latest {self.history_window} steps (at most) you have taken:
-<history>
-{self.history[-self.history_window:]}
-</history>
+    You must follow the ReAct loop and use the history below.
 
-Use the system instructions and the above history to decide what to do in this step.
+    <history>
+    {self.history[-self.history_window:]}
+    </history>
 
-Your tasks in this step:
+    ## Step instructions
+    1) Observation:
+    - If history is empty: say no tests have been run yet.
+    - Otherwise: summarize last status and the FIRST LINE of stderr (if any).
 
-1. Observation:
-   - Look at the most recent entry in the history, especially its `status` and `stderr`
-   - If there is no history yet, your observation should reflect that (e.g., "No tests have been run yet.").
-   Examples:
-     - "status=success, no errors in stderr."
-     - "status=failure, stderr starts with: AssertionError: expected True but got False."
-     - "No tests have been run yet."
+    2) Reasoning:
+    - If last status != success: explain what failed and how you will fix it.
+    - You MUST modify the next <CODE> and/or <TESTS> based on that failure.
+    - Prefer fixing CODE; adjust TESTS only to improve coverage for the spec/edge cases.
 
-2. Reasoning:
-   - Based on your observation, think about what is wrong in the current solution and how to fix it.
-   - Use the error messages to infer which part of the logic, boundary condition, or special case is broken.
-   - In the "reasoning" field, clearly explain:
-       - what you think the bug or issue is, and
-       - what kind of change to the code and/or tests is needed to move closer to passing all tests.
+    3) Action:
+    - Choose "finish" only when you feel confident the current solution is correct and you believe another tool run is unnecessary.
+    - Otherwise choose "run" and improve <CODE>/<TESTS> based on the latest status, stderr.
 
-3. Action:
-   - Based on your observation and reasoning, decide what to do next and set the "action" field to one of:
-       - "run": you are ready to test a concrete version of the solution
-       - "finish": you believe the current solution is sufficient and correct
+    4) Mandatory fixes:
+    - If your previous <CODE> used a one-line function like "def f(...): return ...",
+    you MUST rewrite it into a multi-line function block:
+    def f(...):\n    ...
+    - If tests contained anything other than plain assert statements, you MUST replace them with assert-only tests.
 
-   - When "action" == "run":
-       - You must set "tool_params" to an object of the form:
-         {{
-           "code":  "function body of solution code to test",
-           "tests": "Python test code to run with that solution"
-         }}
-       - This is where you actually materialize the solution code and the tests you want to run.
-
- 4. IMPORTANT:
-    - "code" must be ONLY the function body, not a full function definition:
-    - Do NOT repeat the `def ...` line.
-    - Do NOT add imports or top-level code here.
-    - You MUST include the correct indentation so that the body fits directly under the existing function definition.
-    Example of a valid "code" value:
-    "    return number - int(number)"
-    - The "tests" field must be Python code that will be appended after the solution in the same file.
-    It should consist of one or more assert statements that directly call the completed function.
-    For example:
-        assert has_close_elements([1.0, 2.0, 3.9, 4.0, 5.0, 2.2], 0.3) == True
-        assert has_close_elements([1.0, 2.0, 3.9, 4.0, 5.0, 2.2], 0.05) == False
-"""
+    Now output ONE JSON object only.
+    """.strip()
 
             messages.append({"role": "user", "content": step_prompt})
 
-            response_format = {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "orchestration",
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "observation": {"type": "string"},
-                            "reasoning": {"type": "string"},
-                            "action": {
-                                "type": "string",
-                                "enum": ["continue", "use", "finish"],
-                            },
-                            "tool_params": {
-                                "anyOf": [
-                                    {"type": "null"},
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "code": {"type": "string"},
-                                            "tests": {"type": "string"},
-                                        },
-                                        "required": ["code", "tests"],
-                                    },
-                                ]
-                            },
-                        },
-                        "required": ["observation", "reasoning", "action", "tool_params"],
-                    },
-                },
-            }
+            raw = self._call_llm(messages=messages, response_format=response_format)
 
-            response = self._call_llm(messages=messages, response_format=response_format)
+            # Parse JSON (minimal surface area)
+            try:
+                resp_dict = _parse_json_output(raw)
+            except Exception:
+                resp_dict = {
+                    "observation": "Model did not return valid JSON; attempting tag-parse fallback.",
+                    "reasoning": "I will extract <CODE> and <TESTS> from the raw output and run the tool.",
+                    "action": "run",
+                    "answer": raw if isinstance(raw, str) else "",
+                }
 
-            #breakpoint()
-            
-            resp_dict = _parse_json_output(response)
             observation = resp_dict.get("observation", "")
             reasoning = resp_dict.get("reasoning", "")
-            action = resp_dict.get("action", None)
-            tool_params = resp_dict.get("tool_params") or {}
+            action = resp_dict.get("action", "run")
+            answer = resp_dict.get("answer", "")
 
-            final_candidate = tool_params.get("code", "")
+            code, tests = self._extract_code_tests_from_answer(answer)
 
-            params = {
-                "header": task_input,
-                "code": tool_params.get("code", ""),
-                "tests": tool_params.get("tests", ""),
-            }
+            # Safety guard: don't allow finish before we ever got a success
+            last_success = bool(self.history) and (self.history[-1].get("status") == "success")
+            if action == "finish" and not last_success:
+                action = "run"
+            if action == "finish" and last_success:
+                break
 
-            #breakpoint()
+            # Run tool
+            status = "failure"
+            stderr = ""
+            try:
+                prelude = self._extract_prelude_from_task_input(task_input)
+                ok, err = self.tool.run({"header": prelude, "code": code, "tests": tests})
+                status = "success" if ok else "failure"
+                stderr = err or ""
+            except Exception as e:
+                status = "exception"
+                stderr = repr(e)
 
-            if action == "run":
-                result = self.tool.run(params)
-                if isinstance(result, dict):
-                    status = result.get("status", "")
-                    stderr = result.get("stderr", "")
+            # Update final_code policy
+            if not final_code.strip():
+                final_code = code
+            elif status == "success":
+                final_code = code
 
-            # breakpoint()
-
+            # Record history for next step
             self.history.append(
                 {
                     "round": step,
                     "observation": observation,
                     "reasoning": reasoning,
                     "action": action,
-                    #"code": params["code"],
-                    #"tests": params["tests"],
+                    "code": code,
+                    "tests": tests,
                     "status": status,
                     "stderr": stderr,
                 }
             )
 
-            if status == "success":
-            #if action == "finish":
+        #breakpoint()
+
+        result = self._strip_def_and_normalize_body(final_code)
+
+        if result == "":
+            return final_code
+        else:
+            return result
+
+    def _strip_def_and_normalize_body(self, llm_code: str) -> str:
+        """
+        If llm_code contains a full function (possibly with decorators and multi-line signature),
+        remove the function header and return ONLY the function body, normalized to 4-space indentation.
+        """
+        ends_with_newline = llm_code.endswith("\n")
+        s = llm_code.replace("\r\n", "\n").replace("\r", "\n")
+
+        lines = s.split("\n")
+        if not lines:
+            return llm_code
+
+        # 1) Find the start of the first function header (skip decorators / leading junk)
+        def_start = None
+        def_start_re = re.compile(r"^\s*(?:async\s+def|def)\s+\w+\s*\(")
+        for i, line in enumerate(lines):
+            if def_start_re.match(line):
+                def_start = i
                 break
 
-        return final_candidate
+        # If no def found, return as-is
+        if def_start is None:
+            return llm_code
+
+        # 2) Find where the function header ends (supports multi-line signatures)
+        # Track parentheses balance until it closes, and the line ends with ":" (optionally with comment).
+        paren = 0
+        header_end = None
+        header_end_re = re.compile(r":\s*(#.*)?$")
+
+        for j in range(def_start, len(lines)):
+            line = lines[j]
+
+            # crude but effective: count parens (good enough for typical LLM outputs)
+            paren += line.count("(")
+            paren -= line.count(")")
+
+            if paren <= 0 and header_end_re.search(line.strip()):
+                header_end = j
+                break
+
+        # If we failed to find header end, assume single-line header at def_start
+        if header_end is None:
+            header_end = def_start
+
+        # 3) Everything after header_end is treated as body
+        body = "\n".join(lines[header_end + 1:])
+
+        # Normalize tabs -> spaces before dedent
+        body = body.replace("\t", "    ")
+
+        # Dedent and then re-indent with exactly 4 spaces for non-empty lines
+        body = textwrap.dedent(body).strip("\n")
+
+        fixed_lines = []
+        for ln in body.splitlines():
+            fixed_lines.append(("    " + ln) if ln.strip() else ln)
+
+        out = "\n".join(fixed_lines)
+        if ends_with_newline:
+            out += "\n"
+        return out
+
+    def _extract_prelude_from_task_input(self, task_input: str) -> str:
+        """
+        Returns only the lines BEFORE the first top-level 'def ...('.
+        This removes the function skeleton from header so the model can provide full def in <CODE>.
+        """
+        if not isinstance(task_input, str):
+            return ""
+
+        s = task_input.replace("\r\n", "\n").replace("\r", "\n")
+        lines = s.split("\n")
+
+        prelude = []
+        for line in lines:
+            # first function definition at top level
+            if re.match(r"^\s*def\s+\w+\s*\(", line):
+                break
+            prelude.append(line)
+
+        out = "\n".join(prelude).rstrip()
+        return out + ("\n" if out else "")
+
+    def _extract_code_tests_from_answer(self, answer: str) -> Tuple[str, str]:
+        """
+        Extract <CODE>...</CODE> and <TESTS>...</TESTS> from answer.
+        Accept both actual newlines and literal '\\n' sequences.
+        """
+        if not isinstance(answer, str):
+            return "", ""
+
+        code_m = re.search(r"<CODE>\s*(.*?)\s*</CODE>", answer, re.DOTALL | re.IGNORECASE)
+        tests_m = re.search(r"<TESTS>\s*(.*?)\s*</TESTS>", answer, re.DOTALL | re.IGNORECASE)
+
+        code = code_m.group(1) if code_m else ""
+        tests = tests_m.group(1) if tests_m else ""
+
+        code = code.replace("\\n", "\n").strip("\n")
+        tests = tests.replace("\\n", "\n").strip("\n")
+        return code, tests
 
     # ----------------------------------------------------------------------
     #                           LLM CALL HELPER
@@ -235,26 +336,13 @@ Your tasks in this step:
             )
             return response["response"]["response_message"]
 
-        non_aios_resp = None
-
         if self.model == "meta-llama/Llama-3.1-8B-Instruct":
-            schema_str = json.dumps(response_format, indent=2)
-
-            messages.append({
-                "role": "system",
-                "content": f"""
-                You MUST output JSON strictly following this schema:
-
-                {schema_str}
-                """
-            })
-
             non_aios_resp = completion(
                 model="hosted_vllm/" + self.model,
                 messages=messages,
                 base_url="http://127.0.0.1:8091/v1",
                 temperature=0.2,
-                #response_format=response_format
+                response_format=response_format
             )
         else:
             non_aios_resp = completion(
@@ -263,8 +351,6 @@ Your tasks in this step:
                 temperature=0.2,
                 response_format=response_format
             )
-
-        #breakpoint()
 
         if isinstance(non_aios_resp, str):
             return non_aios_resp

@@ -61,6 +61,8 @@ def main():
     #                    help="Agent kind for HumanEval (e.g., react, cot)")
     parser.add_argument("--agent_num", type=int, default=1,
                         help="Number of concurrent agents (threads)")
+    parser.add_argument("--max_steps", type=int, default=3,
+                        help="Max ReAct steps per task")
     args = parser.parse_args()
 
     # Resolve agent_type using the same key convention as experiment_core
@@ -83,7 +85,7 @@ def main():
     items = list(dataset)[:max_num]
 
     # Create agent pool (concurrency handled via thread pool)
-    agents = [AgentClass(args.on_aios) for _ in range(max(1, args.agent_num))]
+    agents = [AgentClass(args.on_aios, max_steps=args.max_steps) for _ in range(max(1, args.agent_num))]
 
     # Program output directory (keep existing path style)
     programs_dir = os.path.join(os.path.dirname(__file__), "programs")
